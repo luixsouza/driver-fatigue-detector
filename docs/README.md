@@ -4,7 +4,7 @@ Este projeto implementa um sistema de detecção de fadiga e bocejo utilizando v
 
 ## Demonstração em GIF
 
-![Demonstração](docs/sonolency.gif)
+![Demonstração](assets/sonolency.gif)
 
 ## Funcionalidades
 
