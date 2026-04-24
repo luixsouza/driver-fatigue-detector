@@ -11,8 +11,9 @@ class Point:
     y: float
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Frame:
+    """Frame de vídeo. eq=False porque np.ndarray não suporta ==/hash convencional."""
     image: np.ndarray
     timestamp: float
     index: int

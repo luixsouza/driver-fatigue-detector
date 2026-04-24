@@ -29,3 +29,10 @@ class TestFrame:
         f = Frame(image=img, timestamp=0.0, index=0)
         with pytest.raises((AttributeError, Exception)):
             f.index = 99
+
+    def test_frame_has_identity_equality(self):
+        img = np.zeros((10, 10, 3), dtype=np.uint8)
+        f1 = Frame(image=img, timestamp=0.0, index=0)
+        f2 = Frame(image=img, timestamp=0.0, index=0)
+        assert f1 is not f2
+        assert f1 != f2  # eq=False → fallback to identity
