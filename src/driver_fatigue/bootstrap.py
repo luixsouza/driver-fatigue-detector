@@ -11,6 +11,7 @@ from driver_fatigue.application.use_cases.detect_fatigue import DetectFatigueUse
 from driver_fatigue.application.use_cases.monitor_driver import MonitorDriverUseCase
 from driver_fatigue.domain.rendering_theme import RenderingTheme
 from driver_fatigue.domain.value_objects import FatigueThresholds
+from driver_fatigue.infrastructure.alert_sinks.composite import CompositeSink
 from driver_fatigue.infrastructure.alert_sinks.log import LogSink
 from driver_fatigue.infrastructure.alert_sinks.sound import SoundSink
 from driver_fatigue.infrastructure.detectors.mediapipe_detector import MediapipeFaceDetector
@@ -20,30 +21,6 @@ from driver_fatigue.infrastructure.rendering.renderer import FrameRenderer
 from driver_fatigue.infrastructure.video_sources.webcam import WebcamVideoSource
 from driver_fatigue.interfaces.config.settings import AppSettings
 
-
-class _CompositeSink:
-    def __init__(self, *sinks: AlertSinkPort) -> None:
-        self._sinks = sinks
-
-    def notify(self, event) -> None:
-        for s in self._sinks:
-            try:
-                s.notify(event)
-            except Exception:
-                import logging
-                logging.getLogger("driver_fatigue").exception(
-                    "sink %s falhou em notify", type(s).__name__,
-                )
-
-    def on_recovery(self, frame_index: int) -> None:
-        for s in self._sinks:
-            try:
-                s.on_recovery(frame_index)
-            except Exception:
-                import logging
-                logging.getLogger("driver_fatigue").exception(
-                    "sink %s falhou em on_recovery", type(s).__name__,
-                )
 
 
 def _build_source(settings: AppSettings) -> VideoSourcePort:
@@ -75,7 +52,7 @@ def _build_sink(
         return log_sink
     try:
         sound_sink = SoundSink(sound_path=settings.alarm_sound_path)
-        return _CompositeSink(sound_sink, log_sink)
+        return CompositeSink(sound_sink, log_sink)
     except Exception:
         import logging
         logging.getLogger("driver_fatigue").warning(
