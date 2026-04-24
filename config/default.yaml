@@ -1,0 +1,16 @@
+source:
+  kind: webcam
+  index: 0
+thresholds:
+  ear_threshold: 0.25
+  mar_threshold: 0.60
+  consecutive_frames: 20
+  warning_ratio: 0.85
+theme:
+  glow_enabled: true
+  show_hud: true
+  show_face_oval: true
+  smoothing_steps: 20
+  overlay_alpha: 0.35
+alarm_sound_path: audio/alarm.wav
+headless: false
