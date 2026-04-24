@@ -14,67 +14,36 @@ Este projeto implementa um sistema de detecção de fadiga e bocejo utilizando v
 
 ## Instalação
 
-### Pré-requisitos
-
-- Python 3.8 ou superior
-- Webcam para a captura de vídeo
-
-### Dependências
-
-As dependências do projeto estão listadas no arquivo `requirements.txt`. Para instalar as dependências, execute:
-
 ```bash
-pip install -r requirements.txt
-```
-
-### Arquivo `requirements.txt`
-
-```txt
-opencv-python
-dlib
-numpy
-pygame
-```
-
-### Instalação do dlib
-
-Como o `dlib` pode ser complicado de instalar, dependendo do seu sistema operacional, recomenda-se seguir as instruções específicas do [repositório oficial do dlib](https://github.com/davisking/dlib).
-
-No Ubuntu, por exemplo, você pode instalar o `dlib` com os seguintes comandos:
-
-```bash
-sudo apt-get install cmake
-pip install dlib
-```
-
-No Windows, pode ser necessário instalar Visual Studio para obter as ferramentas de build.
-
-### Pygame
-
-Instale o `pygame` com:
-
-```bash
-pip install pygame
+pip install -e ".[dev]"
 ```
 
 ## Uso
 
-1. Certifique-se de que o arquivo `shape_predictor_68_face_landmarks.dat` está na mesma pasta que o script Python. Esse arquivo pode ser baixado [aqui](http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2).
-2. Conecte a webcam ao seu computador.
-3. Execute o script:
-
 ```bash
-python detector_fadiga.py
+# detecção padrão (webcam 0, janela OpenCV)
+driver-fatigue run
+
+# webcam específica
+driver-fatigue run --source webcam:1
+
+# modo headless (sem janela, só alarme sonoro e log)
+driver-fatigue run --headless
+
+# config customizada
+driver-fatigue run --config config/default.yaml
+
+# equivalente via módulo
+python -m driver_fatigue run --source webcam:0
 ```
 
-4. A detecção será feita em tempo real e um alerta sonoro será disparado se a fadiga for detectada.
+## Arquitetura
+
+O projeto segue Clean Architecture em 4 camadas. Veja o design completo em
+[`docs/superpowers/specs/2026-04-24-driver-fatigue-ubiquitous-design.md`](superpowers/specs/2026-04-24-driver-fatigue-ubiquitous-design.md).
 
 ## Como funciona
 
 - O sistema utiliza a razão entre a altura e a largura dos olhos (`Eye Aspect Ratio - EAR`) para detectar se a pessoa está com os olhos fechados.
 - Para detectar bocejos, ele utiliza a razão entre a altura e a largura da boca (`Mouth Aspect Ratio - MAR`).
 - Se um fechamento dos olhos ou bocejo persistir por um número consecutivo de frames, um alarme sonoro será ativado.
-
-## Teclas de controle
-
-- Pressione `q` para encerrar a execução do programa.
