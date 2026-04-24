@@ -14,6 +14,7 @@ from driver_fatigue.domain.value_objects import FatigueThresholds
 from driver_fatigue.infrastructure.alert_sinks.log import LogSink
 from driver_fatigue.infrastructure.alert_sinks.sound import SoundSink
 from driver_fatigue.infrastructure.detectors.mediapipe_detector import MediapipeFaceDetector
+from driver_fatigue.infrastructure.presenters.headless import HeadlessPresenter
 from driver_fatigue.infrastructure.presenters.opencv_window import OpenCvWindowPresenter
 from driver_fatigue.infrastructure.rendering.renderer import FrameRenderer
 from driver_fatigue.infrastructure.video_sources.webcam import WebcamVideoSource
@@ -51,20 +52,9 @@ def _build_source(settings: AppSettings) -> VideoSourcePort:
     raise ValueError(f"source.kind {settings.source.kind!r} não suportado na Fase 1")
 
 
-class _NullPresenter:
-    """Presenter temporário no-op usado até HeadlessPresenter estar disponível."""
-
-    def present(self, frame, landmarks_list, state) -> None:
-        pass
-
-    def should_stop(self) -> bool:
-        return False
-
-    def close(self) -> None:
-        pass
-
-
 def _build_presenter(settings: AppSettings) -> FramePresenterPort:
+    if settings.headless:
+        return HeadlessPresenter()
     theme = RenderingTheme(
         glow_enabled=settings.theme.glow_enabled,
         show_hud=settings.theme.show_hud,
@@ -72,8 +62,6 @@ def _build_presenter(settings: AppSettings) -> FramePresenterPort:
         smoothing_steps=settings.theme.smoothing_steps,
         overlay_alpha=settings.theme.overlay_alpha,
     )
-    if settings.headless:
-        return _NullPresenter()
     renderer = FrameRenderer(theme=theme)
     return OpenCvWindowPresenter(renderer=renderer)
 
