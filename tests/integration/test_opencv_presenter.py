@@ -1,8 +1,11 @@
+from unittest.mock import patch
+
 import numpy as np
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame, Point
 from driver_fatigue.domain.rendering_theme import RenderingTheme
 from driver_fatigue.infrastructure.presenters.opencv_window import OpenCvWindowPresenter
+from driver_fatigue.infrastructure.rendering.renderer import FrameRenderer
 
 
 def _pts(n, scale=50):
@@ -22,28 +25,39 @@ def _frame():
     return Frame(image=np.zeros((240, 320, 3), dtype=np.uint8), timestamp=0.0, index=0)
 
 
-class TestOpenCvWindowPresenterHeadless:
-    def test_render_produces_non_black_output(self):
-        p = OpenCvWindowPresenter(theme=RenderingTheme(), headless=True)
-        state = FatigueState(
-            ear=0.22, mar=0.35, consecutive_frames=3,
-            is_fatigued=False, is_yawning=False, severity="warning",
-        )
-        p.present(_frame(), [_landmarks()], state)
-        assert p.last_rendered is not None
-        assert p.last_rendered.sum() > 0
+class TestOpenCvWindowPresenter:
+    @patch("driver_fatigue.infrastructure.presenters.opencv_window.cv2")
+    def test_present_calls_imshow_with_rendered_frame(self, cv2_mock):
+        cv2_mock.waitKey.return_value = 0
+        renderer = FrameRenderer(theme=RenderingTheme())
+        p = OpenCvWindowPresenter(renderer=renderer)
+        p.present(_frame(), [_landmarks()], FatigueState.initial())
+        assert cv2_mock.imshow.called
+        call_args = cv2_mock.imshow.call_args
+        assert call_args.args[0]
+        assert isinstance(call_args.args[1], np.ndarray)
 
-    def test_no_faces_still_renders_hud(self):
-        p = OpenCvWindowPresenter(theme=RenderingTheme(), headless=True)
+    @patch("driver_fatigue.infrastructure.presenters.opencv_window.cv2")
+    def test_q_key_requests_stop(self, cv2_mock):
+        cv2_mock.waitKey.return_value = ord('q')
+        renderer = FrameRenderer(theme=RenderingTheme())
+        p = OpenCvWindowPresenter(renderer=renderer)
         p.present(_frame(), [], FatigueState.initial())
-        assert p.last_rendered is not None
-        assert p.last_rendered.sum() > 0
+        assert p.should_stop() is True
 
-    def test_should_stop_defaults_false_in_headless(self):
-        p = OpenCvWindowPresenter(theme=RenderingTheme(), headless=True)
-        assert p.should_stop() is False
+    @patch("driver_fatigue.infrastructure.presenters.opencv_window.cv2")
+    def test_close_destroys_window(self, cv2_mock):
+        cv2_mock.waitKey.return_value = 0
+        renderer = FrameRenderer(theme=RenderingTheme())
+        p = OpenCvWindowPresenter(renderer=renderer)
+        p.close()
+        assert cv2_mock.destroyWindow.called
 
-    def test_close_is_idempotent(self):
-        p = OpenCvWindowPresenter(theme=RenderingTheme(), headless=True)
+    @patch("driver_fatigue.infrastructure.presenters.opencv_window.cv2")
+    def test_close_is_idempotent(self, cv2_mock):
+        cv2_mock.waitKey.return_value = 0
+        renderer = FrameRenderer(theme=RenderingTheme())
+        p = OpenCvWindowPresenter(renderer=renderer)
         p.close()
         p.close()
+        assert cv2_mock.destroyWindow.call_count == 1
