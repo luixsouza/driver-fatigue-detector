@@ -1,8 +1,6 @@
 import subprocess
 import sys
 
-import pytest
-
 
 class TestCli:
     def test_help_exits_zero(self):
@@ -11,7 +9,7 @@ class TestCli:
             capture_output=True, text=True, timeout=15,
         )
         assert result.returncode == 0
-        assert "--source" in result.stdout or "run" in result.stdout
+        assert "run" in result.stdout or "--source" in result.stdout
 
     def test_invalid_source_kind_exits_nonzero(self):
         result = subprocess.run(
@@ -20,3 +18,13 @@ class TestCli:
             capture_output=True, text=True, timeout=15,
         )
         assert result.returncode != 0
+
+    def test_file_source_accepted_in_parser(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "driver_fatigue", "run", "--help"],
+            capture_output=True, text=True, timeout=15,
+        )
+        assert result.returncode == 0
+        assert "--source" in result.stdout
+        assert "--sinks" in result.stdout
+        assert "--record" in result.stdout
