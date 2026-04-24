@@ -1,0 +1,47 @@
+import math
+
+import pytest
+
+from driver_fatigue.domain.entities import Point
+from driver_fatigue.domain.metrics import eye_aspect_ratio
+
+
+def _eye(open_ratio: float) -> tuple[Point, ...]:
+    """Olho sintético: p0 e p3 são cantos (largura=1.0),
+    p1,p2 em cima e p5,p4 embaixo separados por open_ratio."""
+    h = open_ratio / 2
+    return (
+        Point(x=0.0, y=0.0),
+        Point(x=0.3, y=-h),
+        Point(x=0.7, y=-h),
+        Point(x=1.0, y=0.0),
+        Point(x=0.7, y=h),
+        Point(x=0.3, y=h),
+    )
+
+
+class TestEyeAspectRatio:
+    def test_fully_open_eye(self):
+        eye = _eye(open_ratio=0.4)
+        assert eye_aspect_ratio(eye) == pytest.approx(0.4, abs=1e-6)
+
+    def test_closed_eye(self):
+        eye = _eye(open_ratio=0.0)
+        assert eye_aspect_ratio(eye) == pytest.approx(0.0, abs=1e-6)
+
+    def test_standard_threshold_boundary(self):
+        eye = _eye(open_ratio=0.25)
+        assert eye_aspect_ratio(eye) == pytest.approx(0.25, abs=1e-6)
+
+    def test_raises_on_wrong_number_of_points(self):
+        pts = tuple(Point(x=float(i), y=0.0) for i in range(5))
+        with pytest.raises(ValueError):
+            eye_aspect_ratio(pts)
+
+    def test_raises_on_zero_width(self):
+        pts = (
+            Point(0.0, 0.0), Point(0.0, 0.0), Point(0.0, 0.0),
+            Point(0.0, 0.0), Point(0.0, 0.0), Point(0.0, 0.0),
+        )
+        with pytest.raises(ValueError):
+            eye_aspect_ratio(pts)
