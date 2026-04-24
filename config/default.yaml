@@ -1,16 +1,40 @@
 source:
   kind: webcam
   index: 0
+
 thresholds:
   ear_threshold: 0.25
   mar_threshold: 0.60
   consecutive_frames: 20
   warning_ratio: 0.85
+
 theme:
   glow_enabled: true
   show_hud: true
   show_face_oval: true
   smoothing_steps: 20
   overlay_alpha: 0.35
+
 alarm_sound_path: audio/alarm.wav
 headless: false
+
+sinks: [sound, log]
+
+# Descomente para habilitar webhook HTTP:
+# http_webhook:
+#   url: https://seu-endpoint.example/driver-fatigue
+#   bearer_token: null
+#   timeout_seconds: 3.0
+
+# Descomente para habilitar MQTT:
+# mqtt:
+#   broker: mqtt.example.com
+#   port: 1883
+#   topic: driver_fatigue/events
+#   username: null
+#   password: null
+
+recording:
+  path: null
+  fps: 30
+  codec: mp4v
