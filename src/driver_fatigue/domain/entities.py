@@ -22,7 +22,7 @@ class Frame:
     index: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FaceLandmarks:
     left_eye_contour: tuple[Point, ...]
     right_eye_contour: tuple[Point, ...]
@@ -33,7 +33,7 @@ class FaceLandmarks:
     face_oval: tuple[Point, ...]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FatigueState:
     ear: float
     mar: float
@@ -54,7 +54,7 @@ class FatigueState:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FatigueEvent:
     timestamp: float
     state: FatigueState
