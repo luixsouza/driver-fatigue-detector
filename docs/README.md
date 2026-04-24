@@ -21,26 +21,54 @@ pip install -e ".[dev]"
 ## Uso
 
 ```bash
-# detecção padrão (webcam 0, janela OpenCV)
+# detecção na webcam (padrão)
 driver-fatigue run
 
 # webcam específica
 driver-fatigue run --source webcam:1
 
-# modo headless (sem janela, só alarme sonoro e log)
-driver-fatigue run --headless
+# arquivo de vídeo
+driver-fatigue run --source file:assets/test_sonolency.mp4
 
-# config customizada
-driver-fatigue run --config config/default.yaml
+# stream RTSP
+driver-fatigue run --source rtsp://user:pass@camera.local/live
+
+# modo headless (sem GUI), só alertas de rede
+driver-fatigue run --headless --sinks log,mqtt --config config/default.yaml
+
+# grava vídeo com overlay (ideal pra demonstração)
+driver-fatigue run --source file:assets/test_sonolency.mp4 --record docs/demo.mp4
+
+# múltiplos sinks simultâneos
+driver-fatigue run --sinks sound,log,http --config config/default.yaml
 
 # equivalente via módulo
 python -m driver_fatigue run --source webcam:0
 ```
 
+## Configuração
+
+Suporta YAML e variáveis de ambiente (prefixo `DRIVER_FATIGUE_`).
+
+```bash
+# exemplo YAML
+driver-fatigue run --config config/default.yaml
+
+# exemplo via env
+export DRIVER_FATIGUE_SOURCE__KIND=rtsp
+export DRIVER_FATIGUE_SOURCE__URL=rtsp://cam.local/stream
+export DRIVER_FATIGUE_SINKS='["log","mqtt"]'
+driver-fatigue run
+```
+
+Consulte `config/default.yaml` e `config/example.env` para todas as opções.
+
 ## Arquitetura
 
 O projeto segue Clean Architecture em 4 camadas. Veja o design completo em
-[`docs/superpowers/specs/2026-04-24-driver-fatigue-ubiquitous-design.md`](superpowers/specs/2026-04-24-driver-fatigue-ubiquitous-design.md).
+[`docs/superpowers/specs/2026-04-24-driver-fatigue-ubiquitous-design.md`](superpowers/specs/2026-04-24-driver-fatigue-ubiquitous-design.md)
+e a expansão da Fase 2 em
+[`docs/superpowers/specs/2026-04-24-fase2-fontes-saidas-gravacao-design.md`](superpowers/specs/2026-04-24-fase2-fontes-saidas-gravacao-design.md).
 
 ## Como funciona
 
