@@ -28,3 +28,20 @@ def eye_aspect_ratio(eye: Sequence[Point]) -> float:
     a = _dist(eye[1], eye[5])
     b = _dist(eye[2], eye[4])
     return (a + b) / (2.0 * width)
+
+
+def mouth_aspect_ratio(mouth: Sequence[Point]) -> float:
+    """Razão altura/largura da boca.
+
+    Espera 12 pontos do contorno externo. Largura = |p0 - p6|.
+    Altura = média de |p3-p9|, |p2-p10|, |p4-p8|.
+    """
+    if len(mouth) != 12:
+        raise ValueError(f"mouth_aspect_ratio requer 12 pontos, recebeu {len(mouth)}")
+    width = _dist(mouth[0], mouth[6])
+    if width == 0.0:
+        raise ValueError("largura da boca é zero — pontos coincidentes")
+    a = _dist(mouth[3], mouth[9])
+    b = _dist(mouth[2], mouth[10])
+    c = _dist(mouth[4], mouth[8])
+    return (a + b + c) / (3.0 * width)
