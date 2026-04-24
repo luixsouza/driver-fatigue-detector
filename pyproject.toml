@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driver-fatigue-detector"
+version = "0.2.0"
+description = "Driver fatigue detector — Clean Architecture"
+requires-python = ">=3.11"
+dependencies = [
+    "opencv-python>=4.9",
+    "mediapipe>=0.10.9",
+    "numpy>=1.26",
+    "pygame>=2.5",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "ruff>=0.3",
+]
+
+[project.scripts]
+driver-fatigue = "driver_fatigue.interfaces.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["src/driver_fatigue/domain", "src/driver_fatigue/application"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
