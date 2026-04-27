@@ -4,22 +4,25 @@ Recebe eventos do detector via HTTP webhook (POST /api/events) e os
 distribui para todos os browsers conectados via Server-Sent Events
 (GET /api/stream). Serve a página HTML estática em /.
 
+Por padrão, sobe o detector como subprocess (apontado pra si mesmo)
+assim que liga — abrir o browser no dashboard já mostra a câmera.
+
 Stack mínimo da stdlib: nenhuma dep extra além do que ja temos no
 projeto. Usa http.server + threading + fila por cliente.
 
 Uso:
-    python -m driver_fatigue.interfaces.web.server --host 0.0.0.0 --port 8000
-
-E aponta o detector para esse servidor:
-    DRIVER_FATIGUE_HTTP_WEBHOOK__URL=http://localhost:8000/api/events
-    driver-fatigue run --sinks log,http
+    driver-fatigue web --port 8000                  # liga detector + dashboard
+    driver-fatigue web --port 8000 --no-detector    # só o dashboard, sem detector
 """
 from __future__ import annotations
 
 import argparse
 import json
 import logging
+import os
 import queue
+import subprocess
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -271,28 +274,95 @@ class _Handler(BaseHTTPRequestHandler):
             raise
 
 
-def serve(host: str = "0.0.0.0", port: int = 8000) -> None:
+def _spawn_detector(
+    *,
+    target_url: str,
+    source: str,
+    extra_args: list[str] | None = None,
+) -> subprocess.Popen:
+    cmd = [
+        sys.executable, "-m", "driver_fatigue", "run",
+        "--source", source,
+        "--headless",
+        "--dashboard", target_url,
+        "--context-validator", "noop",
+    ]
+    if extra_args:
+        cmd.extend(extra_args)
+    _log.info("Subindo detector: %s", " ".join(cmd))
+    creationflags = 0
+    if os.name == "nt":
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    return subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=creationflags,
+    )
+
+
+def serve(
+    host: str = "0.0.0.0",
+    port: int = 8000,
+    *,
+    spawn_detector: bool = True,
+    detector_source: str = "webcam:0",
+    detector_extra_args: list[str] | None = None,
+) -> None:
     httpd = ThreadingHTTPServer((host, port), _Handler)
-    print(f"Driver Fatigue dashboard rodando em http://{host}:{port}")
-    print(f"Configure o detector com webhook:  http://{host}:{port}/api/events")
+    target_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    target_url = f"http://{target_host}:{port}"
+    print(f"Driver Fatigue dashboard rodando em {target_url}")
+
+    detector_proc: subprocess.Popen | None = None
+    if spawn_detector:
+        try:
+            detector_proc = _spawn_detector(
+                target_url=target_url,
+                source=detector_source,
+                extra_args=detector_extra_args,
+            )
+            print(f"Detector iniciado (PID {detector_proc.pid}) — fonte={detector_source}")
+        except Exception as exc:
+            _log.warning("Falha ao subir detector automaticamente (%s); siga em modo manual", exc)
+    else:
+        print("Detector NAO iniciado — rode 'driver-fatigue run --dashboard %s' em outro terminal" % target_url)
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         print("\nFinalizando...")
+    finally:
         httpd.shutdown()
+        if detector_proc is not None and detector_proc.poll() is None:
+            try:
+                detector_proc.terminate()
+                detector_proc.wait(timeout=3)
+            except Exception:
+                try: detector_proc.kill()
+                except Exception: pass
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="driver-fatigue-web")
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--source", default="webcam:0",
+                   help="fonte do detector embutido (webcam:N | file:path | rtsp://...)")
+    p.add_argument("--no-detector", action="store_true",
+                   help="nao sobe o detector automaticamente")
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    serve(host=args.host, port=args.port)
+    serve(
+        host=args.host,
+        port=args.port,
+        spawn_detector=not args.no_detector,
+        detector_source=args.source,
+    )
     return 0
 
 

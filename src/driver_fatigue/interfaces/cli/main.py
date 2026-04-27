@@ -51,9 +51,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    web = sub.add_parser("web", help="dashboard HTTP/SSE em tempo real")
+    web = sub.add_parser("web", help="dashboard HTTP/SSE em tempo real (sobe detector junto)")
     web.add_argument("--host", default="0.0.0.0")
     web.add_argument("--port", type=int, default=8000)
+    web.add_argument("--source", default="webcam:0",
+                     help="fonte do detector embutido (webcam:N | file:path | rtsp://...)")
+    web.add_argument("--no-detector", action="store_true",
+                     help="apenas o servidor; o detector deve ser rodado a parte")
 
     run = sub.add_parser("run", help="inicia detecção")
     run.add_argument(
@@ -97,7 +101,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "web":
         from driver_fatigue.interfaces.web.server import serve
-        serve(host=args.host, port=args.port)
+        serve(
+            host=args.host, port=args.port,
+            spawn_detector=not args.no_detector,
+            detector_source=args.source,
+        )
         return 0
 
     if args.command == "run":

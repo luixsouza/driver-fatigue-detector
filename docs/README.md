@@ -49,21 +49,32 @@ python -m driver_fatigue run --source webcam:0
 ## Dashboard web em tempo real (ubiquidade)
 
 Dashboard mostra **vídeo da câmera com overlay** + **alertas em tempo real**.
-Detector roda em uma máquina (com webcam), dashboard abre em qualquer
-browser na rede — zero dep extra além do que o projeto já usa.
+Detector e dashboard sobem juntos com **um comando único**:
 
 ```bash
-# terminal 1 — dashboard (stdlib only)
+# tudo num so comando — webcam por default
 driver-fatigue web --port 8000
 
-# terminal 2 — detector empurra video+eventos pro dashboard
-driver-fatigue run --dashboard http://localhost:8000 --headless
-# (use --source webcam:0 ou --source file:assets/test_sonolency.mp4)
+# com video em vez de webcam
+driver-fatigue web --port 8000 --source file:assets/test_sonolency.mp4
+
+# RTSP
+driver-fatigue web --port 8000 --source rtsp://user:pass@cam.local/live
 ```
 
 Abra `http://localhost:8000/` — vídeo aparece no painel central com overlay
 do detector (curvas de olho/boca, glow, HUD) e a coluna lateral mostra
 severidade, EAR/MAR, contadores e timeline de alertas.
+
+Para rodar detector e dashboard em **máquinas diferentes** (cenário ubíquo):
+
+```bash
+# máquina A — dashboard só
+driver-fatigue web --port 8000 --no-detector
+
+# máquina B — detector apontando pra A
+driver-fatigue run --dashboard http://maquina-a:8000 --headless
+```
 
 ## Configuração
 
