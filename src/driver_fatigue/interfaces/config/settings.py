@@ -67,6 +67,13 @@ class ContextValidatorSettings(BaseModel):
     eye_state_model_path: Path | None = None
 
 
+class DashboardStreamSettings(BaseModel):
+    enabled: bool = False
+    push_url: str = "http://127.0.0.1:8000/api/video/push"
+    jpeg_quality: int = 70
+    max_fps: float = 15.0
+
+
 class ThemeSettings(BaseModel):
     glow_enabled: bool = True
     show_hud: bool = True
@@ -120,6 +127,7 @@ class AppSettings(BaseSettings):
     mqtt: MqttSettings | None = None
     recording: RecordingSettings = Field(default_factory=RecordingSettings)
     context_validator: ContextValidatorSettings = Field(default_factory=ContextValidatorSettings)
+    dashboard_stream: DashboardStreamSettings = Field(default_factory=DashboardStreamSettings)
 
     @model_validator(mode="after")
     def _check_sink_configs(self) -> "AppSettings":

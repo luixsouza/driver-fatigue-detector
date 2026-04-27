@@ -3,463 +3,521 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Driver Fatigue — Live Dashboard</title>
+<title>Driver Fatigue · Live</title>
 <style>
   :root {
-    --bg-0: #07090d;
-    --bg-1: #0e1218;
-    --bg-2: #161b24;
-    --line: #1f2632;
-    --text-0: #e8edf5;
-    --text-1: #99a3b3;
-    --text-2: #5a6677;
-    --normal: #58c98c;
-    --warning: #f3b94d;
-    --alert: #ff5470;
-    --accent: #62a8ff;
-    --shadow: 0 24px 48px -12px rgba(0,0,0,.55);
-    --radius: 14px;
+    --bg-0: #08090c;
+    --bg-1: #0e1116;
+    --bg-2: #14181f;
+    --bg-3: #1a1f28;
+    --line: #232934;
+    --line-2: #2c333f;
+    --text-0: #f1f4f9;
+    --text-1: #a8b1bf;
+    --text-2: #6b7385;
+    --text-3: #444c5c;
+    --normal: #4ade80;
+    --warning: #fbbf24;
+    --alert:   #f43f5e;
+    --accent:  #6ea8fe;
+    --accent-2:#a78bfa;
+    --shadow-lg: 0 30px 60px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.03);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
   body {
     background:
-      radial-gradient(1200px 600px at 80% -10%, rgba(98,168,255,.06), transparent 60%),
-      radial-gradient(800px 600px at -10% 110%, rgba(255,84,112,.05), transparent 50%),
+      radial-gradient(900px 500px at 12% -20%, rgba(110,168,254,.07), transparent 60%),
+      radial-gradient(900px 500px at 110% 120%, rgba(244,63,94,.06), transparent 55%),
       var(--bg-0);
     color: var(--text-0);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     min-height: 100%;
+    overflow-x: hidden;
   }
-  .layout {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 28px 24px 60px;
+
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
   }
-  header.top {
+
+  header.bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 28px;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(10,12,16,.7);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 5;
   }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .brand .logo {
-    width: 38px; height: 38px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #1a3158 0%, #62a8ff 100%);
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: conic-gradient(from 210deg, #6ea8fe, #a78bfa, #f43f5e, #6ea8fe);
     display: grid; place-items: center;
-    box-shadow: var(--shadow);
+    box-shadow: 0 6px 16px rgba(110,168,254,.25);
   }
-  .brand .logo svg { width: 22px; height: 22px; }
+  .logo::before {
+    content: "";
+    width: 14px; height: 14px;
+    background: var(--bg-0);
+    border-radius: 4px;
+    transform: rotate(45deg);
+  }
   .brand h1 {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 15px; font-weight: 600; margin: 0;
     letter-spacing: -0.01em;
-    margin: 0;
   }
   .brand small {
     display: block;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-2);
     margin-top: 2px;
+    letter-spacing: 0.04em;
   }
   .conn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
+    padding: 6px 12px;
     border: 1px solid var(--line);
-    background: var(--bg-1);
     border-radius: 999px;
     font-size: 12px;
     color: var(--text-1);
+    background: var(--bg-1);
   }
-  .conn .dot {
-    width: 8px; height: 8px;
+  .dot {
+    width: 7px; height: 7px;
     border-radius: 50%;
-    background: var(--text-2);
-    box-shadow: 0 0 0 0 rgba(0,0,0,0);
+    background: var(--text-3);
   }
-  .conn.live .dot {
-    background: var(--normal);
-    animation: pulse 1.6s ease-in-out infinite;
-  }
+  .conn.live  .dot { background: var(--normal); animation: pulse 1.6s ease-in-out infinite; }
   .conn.alert .dot { background: var(--alert); }
   @keyframes pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(88,201,140,.5); }
-    70%  { box-shadow: 0 0 0 12px rgba(88,201,140,0); }
-    100% { box-shadow: 0 0 0 0 rgba(88,201,140,0); }
+    0%   { box-shadow: 0 0 0 0 rgba(74,222,128,.6); }
+    70%  { box-shadow: 0 0 0 10px rgba(74,222,128,0); }
+    100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
   }
 
-  .grid {
+  main.stage {
     display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 20px;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 24px;
+    padding: 24px 28px 36px;
+    max-width: 1480px;
+    width: 100%;
+    margin: 0 auto;
   }
-  @media (max-width: 880px) {
-    .grid { grid-template-columns: 1fr; }
+  @media (max-width: 1024px) {
+    main.stage { grid-template-columns: 1fr; }
   }
 
+  .video-card {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-lg);
+    aspect-ratio: 16 / 9;
+    display: grid;
+    place-items: center;
+  }
+  .video-card img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+    background: #000;
+  }
+  .video-placeholder {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    color: var(--text-2);
+    text-align: center;
+    padding: 40px;
+    z-index: 1;
+    background:
+      radial-gradient(600px 300px at 50% 50%, rgba(110,168,254,.05), transparent 70%),
+      var(--bg-1);
+  }
+  .video-placeholder .icon {
+    width: 64px; height: 64px;
+    margin: 0 auto 18px;
+    border-radius: 16px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    display: grid; place-items: center;
+  }
+  .video-placeholder .icon svg { width: 30px; height: 30px; stroke: var(--text-2); }
+  .video-placeholder h3 {
+    color: var(--text-0);
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .video-placeholder p { font-size: 13px; line-height: 1.6; max-width: 50ch; margin: 0 auto; }
+  .video-placeholder code {
+    color: var(--accent);
+    background: var(--bg-2);
+    padding: 2px 6px; border-radius: 4px;
+    font-size: 12px;
+  }
+  .video-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .corner {
+    position: absolute;
+    top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(8, 9, 12, .7);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.08);
+    font-size: 12px;
+    color: var(--text-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .corner.left  { left: 16px; }
+  .corner.right { right: 16px; }
+  .corner .rec {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--alert);
+    animation: pulse-red 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .35; }
+  }
+
+  .alert-flash {
+    position: absolute; inset: 0;
+    border: 0px solid var(--alert);
+    border-radius: inherit;
+    pointer-events: none;
+    transition: border-width .15s ease;
+    z-index: 3;
+  }
+  .alert-flash.on {
+    border-width: 8px;
+    box-shadow: inset 0 0 80px rgba(244,63,94,.35);
+    animation: flashpulse .9s ease-in-out infinite;
+  }
+  @keyframes flashpulse {
+    0%, 100% { box-shadow: inset 0 0 60px rgba(244,63,94,.25); }
+    50%      { box-shadow: inset 0 0 120px rgba(244,63,94,.5); }
+  }
+
+  aside.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
   .card {
     background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
     border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 22px;
-    box-shadow: var(--shadow);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 16px 40px -16px rgba(0,0,0,.4);
   }
   .card h2 {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--text-2);
-    margin: 0 0 16px;
-  }
-
-  .driver-state {
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    min-height: 360px;
-  }
-  .severity-block {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-  }
-  .severity-pill {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    padding: 6px 12px;
-    border-radius: 999px;
-    color: var(--normal);
-    background: rgba(88,201,140,.12);
-    border: 1px solid rgba(88,201,140,.3);
-  }
-  .severity-pill.warning {
-    color: var(--warning);
-    background: rgba(243,185,77,.10);
-    border-color: rgba(243,185,77,.3);
-  }
-  .severity-pill.alert {
-    color: var(--alert);
-    background: rgba(255,84,112,.12);
-    border-color: rgba(255,84,112,.4);
-  }
-  .severity-headline {
-    font-size: 36px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-  }
-  .severity-sub {
-    color: var(--text-1);
-    font-size: 14px;
-    line-height: 1.5;
-    max-width: 36ch;
-  }
-
-  .ring-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 0 16px;
-  }
-  .ring {
-    position: relative;
-    width: 220px;
-    height: 220px;
-  }
-  .ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
-  .ring .track { stroke: var(--line); }
-  .ring .progress {
-    stroke: var(--normal);
-    stroke-linecap: round;
-    transition: stroke-dashoffset .35s ease, stroke .25s ease;
-  }
-  .ring .progress.warning { stroke: var(--warning); }
-  .ring .progress.alert   { stroke: var(--alert); }
-  .ring-center {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    text-align: center;
-  }
-  .ring-center .num {
-    font-size: 44px;
-    font-weight: 600;
-    letter-spacing: -0.03em;
-  }
-  .ring-center .label {
-    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.16em;
     color: var(--text-2);
-    margin-top: 2px;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card h2 .badge {
+    font-size: 9px;
+    color: var(--text-2);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+  }
+
+  .status-card {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .status-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: grid; place-items: center;
+    background: rgba(74,222,128,.12);
+    color: var(--normal);
+    transition: all .25s ease;
+  }
+  .status-icon.warning { background: rgba(251,191,36,.12); color: var(--warning); }
+  .status-icon.alert   { background: rgba(244,63,94,.15); color: var(--alert); }
+  .status-icon svg { width: 26px; height: 26px; stroke: currentColor; }
+  .status-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .status-text .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-2);
+  }
+  .status-text .head {
+    font-size: 22px; font-weight: 600; letter-spacing: -0.02em;
+    color: var(--text-0);
+    line-height: 1.1;
+  }
+  .progress {
+    height: 6px;
+    border-radius: 6px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .progress > div {
+    height: 100%; width: 0%;
+    background: var(--normal);
+    border-radius: inherit;
+    transition: width .3s ease, background .25s ease;
+  }
+  .progress.warning > div { background: var(--warning); }
+  .progress.alert > div   { background: var(--alert); }
+  .progress-meta {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--text-2);
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
   }
 
   .metrics {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
   }
   .metric {
-    background: rgba(255,255,255,.02);
+    background: var(--bg-1);
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
   .metric .l {
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     color: var(--text-2);
     margin-bottom: 6px;
   }
   .metric .v {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 600;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
   }
   .metric .v small {
-    font-size: 12px;
-    color: var(--text-1);
-    margin-left: 6px;
-    font-weight: 500;
-    letter-spacing: 0;
+    font-size: 11px; color: var(--text-2);
+    margin-left: 6px; letter-spacing: 0;
   }
 
   .timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-height: 420px;
+    display: flex; flex-direction: column;
+    gap: 8px;
+    max-height: 360px;
     overflow-y: auto;
     padding-right: 4px;
   }
-  .timeline::-webkit-scrollbar { width: 6px; }
-  .timeline::-webkit-scrollbar-thumb {
-    background: var(--line); border-radius: 3px;
-  }
+  .timeline::-webkit-scrollbar { width: 5px; }
+  .timeline::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
   .ev {
     display: grid;
-    grid-template-columns: 6px 1fr auto;
-    gap: 14px;
+    grid-template-columns: 4px 1fr auto;
+    gap: 12px;
     align-items: center;
-    padding: 12px 14px;
-    background: rgba(255,255,255,.02);
+    padding: 10px 12px;
+    background: var(--bg-1);
     border: 1px solid var(--line);
     border-radius: 10px;
+    animation: enter .25s ease;
+  }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
   .ev .stripe {
-    width: 6px;
-    height: 100%;
-    min-height: 32px;
-    background: var(--text-2);
-    border-radius: 3px;
+    width: 4px; height: 100%;
+    min-height: 28px;
+    background: var(--text-3);
+    border-radius: 4px;
   }
-  .ev.alert .stripe    { background: var(--alert); }
+  .ev.alert    .stripe { background: var(--alert); }
   .ev.recovery .stripe { background: var(--normal); }
-  .ev.warning .stripe  { background: var(--warning); }
+  .ev.warning  .stripe { background: var(--warning); }
   .ev .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .ev .title {
-    font-size: 13px; font-weight: 600;
-  }
+  .ev .title { font-size: 12px; font-weight: 600; color: var(--text-0); }
   .ev .meta {
-    font-size: 12px; color: var(--text-1);
+    font-size: 11px; color: var(--text-2);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .ev .ts {
-    font-size: 11px;
-    color: var(--text-2);
+    font-size: 10px; color: var(--text-3);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
   .empty {
     color: var(--text-2);
-    font-size: 13px;
-    padding: 20px 4px;
-    text-align: center;
-  }
-
-  .footer {
-    margin-top: 24px;
-    color: var(--text-2);
     font-size: 12px;
     text-align: center;
-  }
-  .footer code {
-    background: var(--bg-2);
-    border: 1px solid var(--line);
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: var(--text-1);
-  }
-
-  body.alert-flash {
-    animation: flash .55s ease 0s 3;
-  }
-  @keyframes flash {
-    0%, 100% { background-color: var(--bg-0); }
-    50%      { background-color: rgba(255,84,112,.06); }
+    padding: 24px 8px;
   }
 </style>
 </head>
 <body>
-  <div class="layout">
-    <header class="top">
+  <div class="app">
+    <header class="bar">
       <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M3 12h6l2 -3l2 6l2 -3h6"/>
-          </svg>
-        </div>
+        <div class="logo" aria-hidden="true"></div>
         <div>
-          <h1>Driver Fatigue — Live Monitor</h1>
-          <small>Sistemas Ubíquos · dashboard remoto via webhook</small>
+          <h1>Driver Fatigue · Live Monitor</h1>
+          <small>Sistemas Ubíquos · stream + alertas remotos</small>
         </div>
       </div>
       <span id="conn" class="conn"><span class="dot"></span><span id="connLabel">aguardando…</span></span>
     </header>
 
-    <div class="grid">
-      <section class="card driver-state">
-        <h2>Estado do motorista</h2>
-        <div class="severity-block">
-          <span id="sevPill" class="severity-pill">Normal</span>
-          <div>
-            <div id="sevHeadline" class="severity-headline">Aguardando dados…</div>
-            <div id="sevSub" class="severity-sub">Inicie o detector apontando o webhook para <code>/api/events</code>.</div>
-          </div>
-        </div>
-
-        <div class="ring-wrap">
-          <div class="ring">
-            <svg viewBox="0 0 100 100">
-              <circle class="track" cx="50" cy="50" r="42" fill="none" stroke-width="6"/>
-              <circle id="ring" class="progress" cx="50" cy="50" r="42" fill="none" stroke-width="6"
-                      stroke-dasharray="263.89" stroke-dashoffset="263.89"/>
+    <main class="stage">
+      <section class="video-card">
+        <div class="video-placeholder" id="placeholder">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 6.5a2.5 2.5 0 0 1 2.5 -2.5h11a2.5 2.5 0 0 1 2.5 2.5v11a2.5 2.5 0 0 1 -2.5 2.5h-11a2.5 2.5 0 0 1 -2.5 -2.5z"/>
+              <path d="M18 9l4 -2v10l-4 -2"/>
             </svg>
-            <div class="ring-center">
-              <div id="ringNum" class="num">0</div>
-              <div class="label">Frames consec.</div>
+          </div>
+          <h3>Aguardando stream da câmera</h3>
+          <p>Inicie o detector com a flag <code>--dashboard http://localhost:8000</code> para fazer streaming dos frames com overlay neste painel.</p>
+        </div>
+        <img id="video" alt="" />
+        <div class="video-overlay">
+          <div class="corner left"><span class="rec"></span><span id="liveLabel">offline</span></div>
+          <div class="corner right">EAR <span id="ovEar">—</span> · MAR <span id="ovMar">—</span></div>
+        </div>
+        <div class="alert-flash" id="flash"></div>
+      </section>
+
+      <aside class="panel">
+        <section class="card status-card">
+          <h2>Estado <span class="badge" id="lastTs">—</span></h2>
+          <div class="status-row">
+            <div class="status-icon" id="statusIcon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M9 12l2 2l4-4"/>
+              </svg>
+            </div>
+            <div class="status-text">
+              <div class="label">Severidade</div>
+              <div class="head" id="statusHead">Normal</div>
             </div>
           </div>
-        </div>
+          <div>
+            <div class="progress" id="progress"><div></div></div>
+            <div class="progress-meta">
+              <span>Frames consec.</span>
+              <span><span id="progressNum">0</span> / 30</span>
+            </div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="l">EAR</div><div class="v" id="mEar">—</div></div>
+            <div class="metric"><div class="l">MAR</div><div class="v" id="mMar">—</div></div>
+            <div class="metric"><div class="l">Alertas</div><div class="v" id="mAlerts">0</div></div>
+            <div class="metric"><div class="l">Recoveries</div><div class="v" id="mRec">0</div></div>
+          </div>
+        </section>
 
-        <div class="metrics">
-          <div class="metric">
-            <div class="l">EAR</div>
-            <div class="v"><span id="mEar">—</span></div>
+        <section class="card">
+          <h2>Eventos</h2>
+          <div id="timeline" class="timeline">
+            <div class="empty">Nenhum evento ainda — quando o detector disparar, aparece aqui.</div>
           </div>
-          <div class="metric">
-            <div class="l">MAR</div>
-            <div class="v"><span id="mMar">—</span></div>
-          </div>
-          <div class="metric">
-            <div class="l">Alertas (sessão)</div>
-            <div class="v"><span id="mAlerts">0</span><small>recuperações <span id="mRec">0</span></small></div>
-          </div>
-          <div class="metric">
-            <div class="l">Último evento</div>
-            <div class="v"><span id="mLast">—</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Linha do tempo</h2>
-        <div id="timeline" class="timeline">
-          <div class="empty">Nenhum evento ainda. Quando o detector disparar um alerta, ele aparece aqui em tempo real.</div>
-        </div>
-      </section>
-    </div>
-
-    <div class="footer">
-      Detector → <code>POST /api/events</code> → SSE em <code>/api/stream</code> · prova de ubiquidade do mesmo domínio
-    </div>
+        </section>
+      </aside>
+    </main>
   </div>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const sevPill   = $("sevPill");
-  const sevHead   = $("sevHeadline");
-  const sevSub    = $("sevSub");
-  const ring      = $("ring");
-  const ringNum   = $("ringNum");
-  const mEar      = $("mEar");
-  const mMar      = $("mMar");
-  const mAlerts   = $("mAlerts");
-  const mRec      = $("mRec");
-  const mLast     = $("mLast");
-  const timeline  = $("timeline");
-  const conn      = $("conn");
-  const connLabel = $("connLabel");
+  const conn = $("conn"), connLabel = $("connLabel");
+  const placeholder = $("placeholder"), video = $("video");
+  const liveLabel = $("liveLabel");
+  const flash = $("flash");
+  const ovEar = $("ovEar"), ovMar = $("ovMar");
+  const statusIcon = $("statusIcon"), statusHead = $("statusHead");
+  const progress = $("progress"), progressNum = $("progressNum");
+  const mEar = $("mEar"), mMar = $("mMar"), mAlerts = $("mAlerts"), mRec = $("mRec");
+  const lastTs = $("lastTs");
+  const timeline = $("timeline");
 
-  const RING_C = 2 * Math.PI * 42;
-  ring.setAttribute("stroke-dasharray", RING_C.toFixed(2));
-  ring.setAttribute("stroke-dashoffset", RING_C.toFixed(2));
+  const ICON_NORMAL = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4-4"/></svg>`;
+  const ICON_WARN   = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.86 2.75z"/></svg>`;
+  const ICON_ALERT  = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4"/><path d="M12 16h.01"/><circle cx="12" cy="12" r="9"/></svg>`;
 
   let counters = { alerts: 0, recoveries: 0 };
   const events = [];
+  let videoStarted = false;
 
-  function setConn(state, label) {
-    conn.classList.remove("live", "alert");
-    if (state) conn.classList.add(state);
-    connLabel.textContent = label;
-  }
-
-  function fmtTs(ts) {
+  function fmtTime(ts) {
     if (!ts) return "—";
     const d = new Date(ts * 1000);
     return d.toLocaleTimeString("pt-BR", { hour12: false });
   }
 
-  function setSeverity(sev) {
-    sevPill.className = "severity-pill" + (sev !== "normal" ? " " + sev : "");
+  function setSeverity(sev, payload) {
+    statusIcon.classList.remove("warning", "alert");
+    progress.classList.remove("warning", "alert");
     if (sev === "alert") {
-      sevPill.textContent = "Alerta";
-      sevHead.textContent = "Motorista sonolento";
-      sevSub.textContent = "Sinais persistentes de fadiga detectados. Recomenda-se parar o veículo.";
-      document.body.classList.remove("alert-flash");
-      void document.body.offsetWidth;
-      document.body.classList.add("alert-flash");
+      statusIcon.classList.add("alert");
+      statusIcon.innerHTML = ICON_ALERT;
+      statusHead.textContent = "Sonolento";
+      progress.classList.add("alert");
+      flash.classList.add("on");
     } else if (sev === "warning") {
-      sevPill.textContent = "Atenção";
-      sevHead.textContent = "Sinais de fadiga";
-      sevSub.textContent = "Indícios pontuais de cansaço. Continue monitorando.";
+      statusIcon.classList.add("warning");
+      statusIcon.innerHTML = ICON_WARN;
+      statusHead.textContent = "Atenção";
+      progress.classList.add("warning");
+      flash.classList.remove("on");
     } else {
-      sevPill.textContent = "Normal";
-      sevHead.textContent = "Motorista atento";
-      sevSub.textContent = "Tudo dentro dos parâmetros.";
+      statusIcon.innerHTML = ICON_NORMAL;
+      statusHead.textContent = "Normal";
+      flash.classList.remove("on");
     }
   }
 
-  function setRing(consecutive, max, sev) {
-    const ratio = Math.max(0, Math.min(1, (consecutive || 0) / Math.max(1, max || 30)));
-    ring.setAttribute("stroke-dashoffset", (RING_C * (1 - ratio)).toFixed(2));
-    ring.classList.remove("warning", "alert");
-    if (sev === "warning") ring.classList.add("warning");
-    if (sev === "alert")   ring.classList.add("alert");
-    ringNum.textContent = String(consecutive ?? 0);
+  function setProgress(consec, max) {
+    const pct = Math.min(100, Math.max(0, (consec / Math.max(1, max)) * 100));
+    progress.firstElementChild.style.width = pct + "%";
+    progressNum.textContent = consec ?? 0;
   }
 
-  function pushEvent(ev) {
-    events.unshift(ev);
-    if (events.length > 80) events.pop();
+  function pushEvent(e) {
+    events.unshift(e);
+    if (events.length > 60) events.pop();
     renderTimeline();
   }
 
@@ -470,22 +528,19 @@
     }
     timeline.innerHTML = events.map(e => {
       const kind = e.event === "fatigue_alert" ? "alert"
-                : e.event === "fatigue_recovery" ? "recovery"
-                : "warning";
-      const title = e.event === "fatigue_alert"     ? "Alerta de fadiga emitido"
-                  : e.event === "fatigue_recovery"  ? "Motorista recuperou estado normal"
-                  : (e.event || "evento");
+                : e.event === "fatigue_recovery" ? "recovery" : "warning";
+      const title = e.event === "fatigue_alert"    ? "Alerta de fadiga"
+                  : e.event === "fatigue_recovery" ? "Motorista recuperou" : (e.event || "evento");
       const meta = [];
       if (e.ear !== undefined) meta.push("EAR " + (+e.ear).toFixed(2));
       if (e.mar !== undefined) meta.push("MAR " + (+e.mar).toFixed(2));
       if (e.consecutive_frames !== undefined) meta.push("conseq " + e.consecutive_frames);
-      if (e.frame_index !== undefined) meta.push("frame #" + e.frame_index);
-      const ts = fmtTs(e.received_at || e.timestamp);
+      const ts = fmtTime(e.received_at || e.timestamp);
       return `<div class="ev ${kind}">
         <div class="stripe"></div>
         <div class="body">
           <div class="title">${title}</div>
-          <div class="meta">${meta.join(" · ")}</div>
+          <div class="meta">${meta.join(" · ") || "—"}</div>
         </div>
         <div class="ts">${ts}</div>
       </div>`;
@@ -495,42 +550,76 @@
   function ingest(payload) {
     if (!payload || !payload.event) return;
     pushEvent(payload);
-    mLast.textContent = fmtTs(payload.received_at || payload.timestamp);
-
+    lastTs.textContent = fmtTime(payload.received_at || payload.timestamp);
     if (payload.event === "fatigue_alert") {
       counters.alerts += 1;
       mAlerts.textContent = counters.alerts;
-      setSeverity(payload.severity || "alert");
-      if (payload.ear !== undefined) mEar.textContent = (+payload.ear).toFixed(2);
-      if (payload.mar !== undefined) mMar.textContent = (+payload.mar).toFixed(2);
-      setRing(payload.consecutive_frames, 30, payload.severity || "alert");
+      setSeverity(payload.severity || "alert", payload);
+      if (payload.ear !== undefined) {
+        mEar.textContent = (+payload.ear).toFixed(2);
+        ovEar.textContent = (+payload.ear).toFixed(2);
+      }
+      if (payload.mar !== undefined) {
+        mMar.textContent = (+payload.mar).toFixed(2);
+        ovMar.textContent = (+payload.mar).toFixed(2);
+      }
+      setProgress(payload.consecutive_frames || 0, 30);
     } else if (payload.event === "fatigue_recovery") {
       counters.recoveries += 1;
       mRec.textContent = counters.recoveries;
-      setSeverity("normal");
-      setRing(0, 30, "normal");
+      setSeverity("normal", payload);
+      setProgress(0, 30);
     }
   }
+
+  function setConn(state, label) {
+    conn.classList.remove("live", "alert");
+    if (state) conn.classList.add(state);
+    connLabel.textContent = label;
+  }
+
+  function startVideo() {
+    if (videoStarted) return;
+    videoStarted = true;
+    video.onload = () => {
+      placeholder.style.display = "none";
+      liveLabel.textContent = "ao vivo";
+    };
+    video.onerror = () => {
+      videoStarted = false;
+      placeholder.style.display = "grid";
+      liveLabel.textContent = "offline";
+      setTimeout(startVideo, 2000);
+    };
+    video.src = "/api/video?_=" + Date.now();
+  }
+
+  function pollVideo() {
+    fetch("/api/health")
+      .then(r => r.json())
+      .then(h => {
+        if (h.video_age_seconds !== null && h.video_age_seconds < 5) {
+          startVideo();
+        } else {
+          videoStarted = false;
+          video.removeAttribute("src");
+          placeholder.style.display = "grid";
+          liveLabel.textContent = "offline";
+        }
+      })
+      .catch(() => {});
+  }
+  pollVideo();
+  setInterval(pollVideo, 4000);
 
   function connect() {
     setConn(null, "conectando…");
     let es;
-    try {
-      es = new EventSource("/api/stream");
-    } catch (err) {
-      setConn("alert", "falha");
-      setTimeout(connect, 3000);
-      return;
-    }
+    try { es = new EventSource("/api/stream"); }
+    catch (err) { setConn("alert", "falha"); setTimeout(connect, 3000); return; }
     es.onopen = () => setConn("live", "conectado");
-    es.onmessage = (msg) => {
-      try { ingest(JSON.parse(msg.data)); } catch (_) {}
-    };
-    es.onerror = () => {
-      setConn("alert", "reconectando…");
-      es.close();
-      setTimeout(connect, 2000);
-    };
+    es.onmessage = (msg) => { try { ingest(JSON.parse(msg.data)); } catch (_) {} };
+    es.onerror = () => { setConn("alert", "reconectando…"); es.close(); setTimeout(connect, 2000); };
   }
   connect();
 })();

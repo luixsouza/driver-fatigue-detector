@@ -8,6 +8,8 @@ from pathlib import Path
 from driver_fatigue.bootstrap import build_monitor_use_case
 from driver_fatigue.interfaces.config.settings import (
     AppSettings,
+    DashboardStreamSettings,
+    HttpWebhookSettings,
     RecordingSettings,
     SourceSettings,
 )
@@ -76,6 +78,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="validador contextual de alertas (default: usa config)",
     )
+    run.add_argument(
+        "--dashboard", default=None,
+        metavar="URL",
+        help="URL do dashboard p/ enviar webhook+video (ex http://localhost:8000)",
+    )
     run.add_argument("--verbose", "-v", action="store_true")
     return parser
 
@@ -115,6 +122,23 @@ def main(argv: list[str] | None = None) -> int:
             updates["context_validator"] = settings.context_validator.model_copy(
                 update={"kind": args.context_validator},
             )
+        if args.dashboard is not None:
+            base = args.dashboard.rstrip("/")
+            updates["dashboard_stream"] = DashboardStreamSettings(
+                enabled=True,
+                push_url=f"{base}/api/video/push",
+                jpeg_quality=settings.dashboard_stream.jpeg_quality,
+                max_fps=settings.dashboard_stream.max_fps,
+            )
+            updates["http_webhook"] = HttpWebhookSettings(
+                url=f"{base}/api/events",
+                bearer_token=None,
+                timeout_seconds=2.0,
+            )
+            sinks = list(settings.sinks if args.sinks is None else args.sinks)
+            if "http" not in sinks:
+                sinks.append("http")
+            updates["sinks"] = sinks
         settings = settings.model_copy(update=updates)
 
         uc = build_monitor_use_case(settings=settings)

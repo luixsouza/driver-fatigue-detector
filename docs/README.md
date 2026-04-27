@@ -48,22 +48,22 @@ python -m driver_fatigue run --source webcam:0
 
 ## Dashboard web em tempo real (ubiquidade)
 
-Sobe um dashboard que recebe eventos do detector via webhook HTTP e os mostra
-ao vivo via Server-Sent Events. O detector pode rodar em uma máquina e o
-dashboard ser aberto em qualquer browser na rede — mesma arquitetura, sem
-acoplamento extra.
+Dashboard mostra **vídeo da câmera com overlay** + **alertas em tempo real**.
+Detector roda em uma máquina (com webcam), dashboard abre em qualquer
+browser na rede — zero dep extra além do que o projeto já usa.
 
 ```bash
-# terminal 1 — dashboard (sem deps adicionais, só stdlib)
+# terminal 1 — dashboard (stdlib only)
 driver-fatigue web --port 8000
 
-# terminal 2 — detector apontando o webhook pra esse servidor
-DRIVER_FATIGUE_HTTP_WEBHOOK__URL=http://localhost:8000/api/events \
-  driver-fatigue run --sinks log,http --config config/default.yaml
+# terminal 2 — detector empurra video+eventos pro dashboard
+driver-fatigue run --dashboard http://localhost:8000 --headless
+# (use --source webcam:0 ou --source file:assets/test_sonolency.mp4)
 ```
 
-Abra `http://localhost:8000/` no browser — alertas e recuperações chegam em
-tempo real, sem reload.
+Abra `http://localhost:8000/` — vídeo aparece no painel central com overlay
+do detector (curvas de olho/boca, glow, HUD) e a coluna lateral mostra
+severidade, EAR/MAR, contadores e timeline de alertas.
 
 ## Configuração
 

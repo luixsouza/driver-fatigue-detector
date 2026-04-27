@@ -33,6 +33,44 @@ _subscribers_lock = threading.Lock()
 _subscribers: list[queue.Queue] = []
 _last_event: dict[str, Any] | None = None
 
+_video_lock = threading.Lock()
+_video_subscribers: list[queue.Queue] = []
+_last_jpeg: bytes | None = None
+_last_jpeg_at: float = 0.0
+
+
+def _push_jpeg(jpeg: bytes) -> None:
+    global _last_jpeg, _last_jpeg_at
+    _last_jpeg = jpeg
+    _last_jpeg_at = time.monotonic()
+    with _video_lock:
+        dead: list[queue.Queue] = []
+        for q in _video_subscribers:
+            try:
+                q.put_nowait(jpeg)
+            except queue.Full:
+                # consumidor lento: dropa o frame mais antigo dele
+                try:
+                    q.get_nowait()
+                    q.put_nowait(jpeg)
+                except (queue.Empty, queue.Full):
+                    dead.append(q)
+        for q in dead:
+            _video_subscribers.remove(q)
+
+
+def _video_subscribe() -> queue.Queue:
+    q: queue.Queue = queue.Queue(maxsize=2)
+    with _video_lock:
+        _video_subscribers.append(q)
+    return q
+
+
+def _video_unsubscribe(q: queue.Queue) -> None:
+    with _video_lock:
+        if q in _video_subscribers:
+            _video_subscribers.remove(q)
+
 
 def _broadcast(event: dict[str, Any]) -> None:
     global _last_event
@@ -79,27 +117,46 @@ class _Handler(BaseHTTPRequestHandler):
         if self.path == "/api/stream":
             self._serve_sse()
             return
+        if self.path == "/api/video":
+            self._serve_mjpeg()
+            return
         if self.path == "/api/health":
-            self._json(200, {"ok": True, "subscribers": len(_subscribers)})
+            self._json(200, {
+                "ok": True,
+                "subscribers": len(_subscribers),
+                "video_subscribers": len(_video_subscribers),
+                "video_age_seconds": (
+                    time.monotonic() - _last_jpeg_at if _last_jpeg is not None else None
+                ),
+            })
             return
         self.send_error(404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path != "/api/events":
-            self.send_error(404, "not found")
+        if self.path == "/api/events":
+            length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0:
+                self.send_error(400, "empty body")
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            except json.JSONDecodeError as exc:
+                self.send_error(400, f"invalid json: {exc}")
+                return
+            payload.setdefault("received_at", time.time())
+            _broadcast(payload)
+            self._json(202, {"status": "accepted"})
             return
-        length = int(self.headers.get("Content-Length", "0"))
-        if length <= 0:
-            self.send_error(400, "empty body")
+        if self.path == "/api/video/push":
+            length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0 or length > 5_000_000:
+                self.send_error(400, "invalid jpeg size")
+                return
+            jpeg = self.rfile.read(length)
+            _push_jpeg(jpeg)
+            self._json(202, {"status": "accepted"})
             return
-        try:
-            payload = json.loads(self.rfile.read(length).decode("utf-8"))
-        except json.JSONDecodeError as exc:
-            self.send_error(400, f"invalid json: {exc}")
-            return
-        payload.setdefault("received_at", time.time())
-        _broadcast(payload)
-        self._json(202, {"status": "accepted"})
+        self.send_error(404, "not found")
 
     def _serve_static(self, name: str, mime: str) -> None:
         target = (STATIC_DIR / name).resolve()
@@ -167,6 +224,43 @@ class _Handler(BaseHTTPRequestHandler):
             return
         finally:
             _unsubscribe(q)
+
+    def _serve_mjpeg(self) -> None:
+        boundary = "fatigueframe"
+        self.send_response(200)
+        self.send_header("Content-Type", f"multipart/x-mixed-replace; boundary={boundary}")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.send_header("Pragma", "no-cache")
+        self.end_headers()
+        q = _video_subscribe()
+        try:
+            if _last_jpeg is not None:
+                self._mjpeg_send(boundary, _last_jpeg)
+            while True:
+                try:
+                    jpeg = q.get(timeout=10.0)
+                except queue.Empty:
+                    continue
+                self._mjpeg_send(boundary, jpeg)
+        except (BrokenPipeError, ConnectionResetError):
+            return
+        finally:
+            _video_unsubscribe(q)
+
+    def _mjpeg_send(self, boundary: str, jpeg: bytes) -> None:
+        head = (
+            f"--{boundary}\r\n"
+            f"Content-Type: image/jpeg\r\n"
+            f"Content-Length: {len(jpeg)}\r\n\r\n"
+        ).encode("ascii")
+        try:
+            self.wfile.write(head)
+            self.wfile.write(jpeg)
+            self.wfile.write(b"\r\n")
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            raise
 
     def _sse_send(self, event: dict) -> None:
         line = f"data: {json.dumps(event)}\n\n".encode("utf-8")

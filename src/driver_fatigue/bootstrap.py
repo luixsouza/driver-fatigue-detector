@@ -27,6 +27,7 @@ from driver_fatigue.infrastructure.detectors.mediapipe_detector import Mediapipe
 from driver_fatigue.infrastructure.presenters.composite import CompositePresenter
 from driver_fatigue.infrastructure.presenters.file_recorder import FileRecorderPresenter
 from driver_fatigue.infrastructure.presenters.headless import HeadlessPresenter
+from driver_fatigue.infrastructure.presenters.mjpeg_push import MjpegStreamPresenter
 from driver_fatigue.infrastructure.presenters.opencv_window import OpenCvWindowPresenter
 from driver_fatigue.infrastructure.rendering.renderer import FrameRenderer
 from driver_fatigue.infrastructure.video_sources.file import FileVideoSource
@@ -118,15 +119,24 @@ def _build_presenter(
     renderer: FrameRenderer,
 ) -> FramePresenterPort:
     main = HeadlessPresenter() if settings.headless else OpenCvWindowPresenter(renderer=renderer)
-    if settings.recording.path is None:
+    extras: list = []
+    if settings.recording.path is not None:
+        extras.append(FileRecorderPresenter(
+            renderer=renderer,
+            output_path=settings.recording.path,
+            fps=settings.recording.fps,
+            codec=settings.recording.codec,
+        ))
+    if settings.dashboard_stream.enabled:
+        extras.append(MjpegStreamPresenter(
+            renderer=renderer,
+            push_url=settings.dashboard_stream.push_url,
+            jpeg_quality=settings.dashboard_stream.jpeg_quality,
+            max_fps=settings.dashboard_stream.max_fps,
+        ))
+    if not extras:
         return main
-    recorder = FileRecorderPresenter(
-        renderer=renderer,
-        output_path=settings.recording.path,
-        fps=settings.recording.fps,
-        codec=settings.recording.codec,
-    )
-    return CompositePresenter(main, recorder)
+    return CompositePresenter(main, *extras)
 
 
 def _build_calibration(settings: AppSettings) -> CalibrationSettings:
