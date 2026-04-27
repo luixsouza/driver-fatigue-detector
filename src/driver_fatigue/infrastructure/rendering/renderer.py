@@ -96,12 +96,29 @@ class FrameRenderer:
 
         if self._theme.show_hud:
             fps = self._update_fps(frame.timestamp or time.monotonic())
+            baseline_label = None
+            if state.baseline.sample_count > 0:
+                if state.baseline.sample_count < 30:
+                    baseline_label = f"calibrating {state.baseline.sample_count}"
+                else:
+                    baseline_label = (
+                        f"baseline EAR {state.baseline.ear_rest:.2f} "
+                        f"MAR {state.baseline.mar_rest:.2f}"
+                    )
+            quality_label = None
+            if state.quality.trustworthy:
+                if baseline_label:
+                    quality_label = "QUALITY OK"
+            else:
+                quality_label = f"QUALITY skip ({state.quality.reason})"
             img = draw_hud(
                 img,
                 ear=state.ear, mar=state.mar,
                 consecutive=state.consecutive_frames,
                 fps=fps, severity=state.severity,
                 max_consecutive=max(1, state.consecutive_frames + 1),
+                quality_label=quality_label,
+                baseline_label=baseline_label,
             )
 
         return img

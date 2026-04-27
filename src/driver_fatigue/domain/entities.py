@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 import numpy as np
+
+from driver_fatigue.domain.value_objects import FrameQuality, PersonalBaseline
 
 Severity = Literal["normal", "warning", "alert"]
 
@@ -41,6 +43,11 @@ class FatigueState:
     is_fatigued: bool
     is_yawning: bool
     severity: Severity
+    recovery_frames: int = 0
+    last_alert_timestamp: float = -1.0
+    baseline: PersonalBaseline = field(default_factory=PersonalBaseline.empty)
+    quality: FrameQuality = field(default_factory=lambda: FrameQuality.trusted())
+    mar_window: tuple[float, ...] = ()
 
     @classmethod
     def initial(cls) -> "FatigueState":
@@ -51,6 +58,11 @@ class FatigueState:
             is_fatigued=False,
             is_yawning=False,
             severity="normal",
+            recovery_frames=0,
+            last_alert_timestamp=-1.0,
+            baseline=PersonalBaseline.empty(),
+            quality=FrameQuality.trusted(),
+            mar_window=(),
         )
 
 

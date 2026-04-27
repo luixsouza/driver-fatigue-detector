@@ -7,6 +7,24 @@ thresholds:
   mar_threshold: 0.60
   consecutive_frames: 20
   warning_ratio: 0.85
+  recovery_frames: 10
+  min_alert_duration_frames: 5
+  alarm_cooldown_seconds: 5.0
+  yawn_window_frames: 45
+  yawn_stability_max: 0.04
+
+calibration:
+  enabled: true
+  warmup_frames: 60
+  ear_close_ratio: 0.75
+  mar_open_zscore: 2.5
+
+frame_quality:
+  enabled: true
+  min_face_confidence: 0.5
+  min_face_area_ratio: 0.05
+  max_head_yaw_deg: 35.0
+  max_head_pitch_deg: 25.0
 
 theme:
   glow_enabled: true
@@ -16,9 +34,26 @@ theme:
   overlay_alpha: 0.35
 
 alarm_sound_path: audio/alarm.wav
+
+sound_sink:
+  start_volume: 0.4
+  peak_volume: 1.0
+  ramp_seconds: 1.5
+  cooldown_seconds: 2.0
+
 headless: false
 
 sinks: [sound, log]
+
+# Validador contextual (100% local, gratuito)
+# kind: noop | eye_state
+context_validator:
+  kind: eye_state
+  min_confidence: 0.6
+  fail_safe_on_error: alarm
+  perclos_window_seconds: 60.0
+  perclos_threshold: 0.4
+  # eye_state_model_path: models/eye_state.onnx   # opcional
 
 # Descomente para habilitar webhook HTTP:
 # http_webhook:

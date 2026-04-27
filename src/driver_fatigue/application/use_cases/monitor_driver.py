@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import logging
+
 from driver_fatigue.application.ports import (
     AlertSinkPort,
+    ContextValidatorPort,
     FramePresenterPort,
     VideoSourcePort,
 )
 from driver_fatigue.application.use_cases.detect_fatigue import DetectFatigueUseCase
 from driver_fatigue.domain.entities import FatigueEvent, FatigueState
+
+_log = logging.getLogger("driver_fatigue.monitor")
 
 
 class MonitorDriverUseCase:
@@ -16,11 +21,18 @@ class MonitorDriverUseCase:
         detect: DetectFatigueUseCase,
         sink: AlertSinkPort,
         presenter: FramePresenterPort,
+        *,
+        context_validator: ContextValidatorPort | None = None,
+        min_validator_confidence: float = 0.6,
+        fail_safe_on_error: str = "alarm",
     ) -> None:
         self._source = source
         self._detect = detect
         self._sink = sink
         self._presenter = presenter
+        self._validator = context_validator
+        self._min_confidence = min_validator_confidence
+        self._fail_safe_on_error = fail_safe_on_error
 
     def run(self) -> None:
         state = FatigueState.initial()
@@ -30,9 +42,12 @@ class MonitorDriverUseCase:
                 if frame is None:
                     break
                 new_state, faces = self._detect.execute(frame, state)
-
-                self._maybe_notify(previous=state, current=new_state, frame_index=frame.index)
-
+                self._maybe_notify(
+                    previous=state,
+                    current=new_state,
+                    frame=frame,
+                    faces=faces,
+                )
                 self._presenter.present(frame, faces, new_state)
                 state = new_state
         finally:
@@ -41,17 +56,33 @@ class MonitorDriverUseCase:
 
     def _maybe_notify(
         self,
+        *,
         previous: FatigueState,
         current: FatigueState,
-        frame_index: int,
+        frame,
+        faces,
     ) -> None:
         entered_alert = previous.severity != "alert" and current.severity == "alert"
         left_alert = previous.severity == "alert" and current.severity == "normal"
         if entered_alert:
+            if self._validator is not None and faces:
+                if not self._is_confirmed(frame, faces[0], current):
+                    _log.info("ctx_suppressed: alarme inibido por context validator")
+                    return
             self._sink.notify(FatigueEvent(
-                timestamp=float(frame_index),
+                timestamp=frame.timestamp if frame is not None else float(current.consecutive_frames),
                 state=current,
-                frame_index=frame_index,
+                frame_index=frame.index if frame is not None else 0,
             ))
         elif left_alert:
-            self._sink.on_recovery(frame_index)
+            self._sink.on_recovery(frame.index if frame is not None else 0)
+
+    def _is_confirmed(self, frame, face, state: FatigueState) -> bool:
+        try:
+            verdict = self._validator.confirm_drowsy(frame, face, state)
+        except Exception as exc:
+            _log.warning("context validator falhou (%s): fail_safe=%s", exc, self._fail_safe_on_error)
+            return self._fail_safe_on_error != "suppress"
+        if not verdict.drowsy:
+            return False
+        return verdict.confidence >= self._min_confidence

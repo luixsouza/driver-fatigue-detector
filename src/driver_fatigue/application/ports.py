@@ -9,6 +9,7 @@ from driver_fatigue.domain.entities import (
     FatigueState,
     Frame,
 )
+from driver_fatigue.domain.value_objects import ContextVerdict
 
 
 @runtime_checkable
@@ -37,6 +38,25 @@ class AlertSinkPort(Protocol):
 
     def on_recovery(self, frame_index: int) -> None:
         """Chamado quando severity volta a 'normal' após 'alert'."""
+        ...
+
+
+@runtime_checkable
+class ContextValidatorPort(Protocol):
+    """Confirma (ou nega) que um candidato a alerta de fadiga é real.
+
+    Chamado SOMENTE quando a heurística do evaluator decidiu entrar em
+    'alert'. Implementações típicas: classificador local de eyes-open/closed,
+    PERCLOS, etc. Implementação `noop` sempre confirma (mantém comportamento
+    Fase 2).
+    """
+
+    def confirm_drowsy(
+        self,
+        frame: Frame,
+        landmarks: FaceLandmarks,
+        state: FatigueState,
+    ) -> ContextVerdict:
         ...
 
 

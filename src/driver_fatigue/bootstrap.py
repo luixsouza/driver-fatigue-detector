@@ -5,18 +5,24 @@ from typing import Literal
 
 from driver_fatigue.application.ports import (
     AlertSinkPort,
+    ContextValidatorPort,
     FramePresenterPort,
     VideoSourcePort,
 )
 from driver_fatigue.application.use_cases.detect_fatigue import DetectFatigueUseCase
 from driver_fatigue.application.use_cases.monitor_driver import MonitorDriverUseCase
 from driver_fatigue.domain.rendering_theme import RenderingTheme
-from driver_fatigue.domain.value_objects import FatigueThresholds
+from driver_fatigue.domain.value_objects import (
+    CalibrationSettings,
+    FatigueThresholds,
+    FrameQualityPolicy,
+)
 from driver_fatigue.infrastructure.alert_sinks.composite import CompositeSink
 from driver_fatigue.infrastructure.alert_sinks.http_webhook import HttpWebhookSink
 from driver_fatigue.infrastructure.alert_sinks.log import LogSink
 from driver_fatigue.infrastructure.alert_sinks.mqtt import MqttSink
 from driver_fatigue.infrastructure.alert_sinks.sound import SoundSink
+from driver_fatigue.infrastructure.context_validators.noop import NoopContextValidator
 from driver_fatigue.infrastructure.detectors.mediapipe_detector import MediapipeFaceDetector
 from driver_fatigue.infrastructure.presenters.composite import CompositePresenter
 from driver_fatigue.infrastructure.presenters.file_recorder import FileRecorderPresenter
@@ -55,7 +61,13 @@ def _build_single_sink(
         if sound_override == "disabled":
             return None
         try:
-            return SoundSink(sound_path=settings.alarm_sound_path)
+            return SoundSink(
+                sound_path=settings.alarm_sound_path,
+                start_volume=settings.sound_sink.start_volume,
+                peak_volume=settings.sound_sink.peak_volume,
+                ramp_seconds=settings.sound_sink.ramp_seconds,
+                cooldown_seconds=settings.sound_sink.cooldown_seconds,
+            )
         except Exception:
             _log.warning("SoundSink indisponivel, ignorando")
             return None
@@ -117,10 +129,61 @@ def _build_presenter(
     return CompositePresenter(main, recorder)
 
 
+def _build_calibration(settings: AppSettings) -> CalibrationSettings:
+    cfg = settings.calibration
+    return CalibrationSettings(
+        enabled=cfg.enabled,
+        warmup_frames=cfg.warmup_frames,
+        ear_close_ratio=cfg.ear_close_ratio,
+        mar_open_zscore=cfg.mar_open_zscore,
+    )
+
+
+def _build_quality_policy(settings: AppSettings) -> FrameQualityPolicy:
+    cfg = settings.frame_quality
+    if not cfg.enabled:
+        return FrameQualityPolicy()
+    return FrameQualityPolicy(
+        min_face_confidence=cfg.min_face_confidence,
+        min_face_area_ratio=cfg.min_face_area_ratio,
+        max_head_yaw_deg=cfg.max_head_yaw_deg,
+        max_head_pitch_deg=cfg.max_head_pitch_deg,
+    )
+
+
+def _build_validator(settings: AppSettings) -> ContextValidatorPort | None:
+    cfg = settings.context_validator
+    if cfg.kind == "noop":
+        return None
+    if cfg.kind == "eye_state":
+        try:
+            from driver_fatigue.infrastructure.context_validators.eye_state_onnx import (
+                EyeStateContextValidator,
+            )
+        except Exception as exc:
+            _log.warning(
+                "EyeStateContextValidator indisponivel (%s); usando noop", exc,
+            )
+            return None
+        try:
+            return EyeStateContextValidator(
+                model_path=cfg.eye_state_model_path,
+                perclos_window_seconds=cfg.perclos_window_seconds,
+                perclos_threshold=cfg.perclos_threshold,
+            )
+        except Exception as exc:
+            _log.warning(
+                "Falha ao construir EyeStateContextValidator (%s); usando noop", exc,
+            )
+            return None
+    return NoopContextValidator()
+
+
 def build_monitor_use_case(
     settings: AppSettings,
     source_override: VideoSourcePort | None = None,
     sound_override: Literal["disabled"] | None = None,
+    validator_override: ContextValidatorPort | None = None,
 ) -> MonitorDriverUseCase:
     source = source_override if source_override is not None else _build_source(settings)
     detector = MediapipeFaceDetector()
@@ -129,11 +192,27 @@ def build_monitor_use_case(
         mar_threshold=settings.thresholds.mar_threshold,
         consecutive_frames=settings.thresholds.consecutive_frames,
         warning_ratio=settings.thresholds.warning_ratio,
+        recovery_frames=settings.thresholds.recovery_frames,
+        min_alert_duration_frames=settings.thresholds.min_alert_duration_frames,
+        alarm_cooldown_seconds=settings.thresholds.alarm_cooldown_seconds,
+        yawn_window_frames=settings.thresholds.yawn_window_frames,
+        yawn_stability_max=settings.thresholds.yawn_stability_max,
     )
-    detect = DetectFatigueUseCase(detector=detector, thresholds=thresholds)
+    calibration = _build_calibration(settings)
+    quality_policy = _build_quality_policy(settings)
+    detect = DetectFatigueUseCase(
+        detector=detector,
+        thresholds=thresholds,
+        calibration=calibration,
+        quality_policy=quality_policy,
+    )
     sink = _build_sinks(settings, sound_override=sound_override)
     renderer = _build_renderer(settings)
     presenter = _build_presenter(settings, renderer)
+    validator = validator_override if validator_override is not None else _build_validator(settings)
     return MonitorDriverUseCase(
         source=source, detect=detect, sink=sink, presenter=presenter,
+        context_validator=validator,
+        min_validator_confidence=settings.context_validator.min_confidence,
+        fail_safe_on_error=settings.context_validator.fail_safe_on_error,
     )

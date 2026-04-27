@@ -65,6 +65,12 @@ def _build_parser() -> argparse.ArgumentParser:
     run.add_argument("--config", type=Path, default=None,
                      help="caminho para YAML de configuração")
     run.add_argument("--headless", action="store_true", help="sem janela OpenCV")
+    run.add_argument(
+        "--context-validator",
+        choices=["noop", "eye_state"],
+        default=None,
+        help="validador contextual de alertas (default: usa config)",
+    )
     run.add_argument("--verbose", "-v", action="store_true")
     return parser
 
@@ -94,6 +100,10 @@ def main(argv: list[str] | None = None) -> int:
                 path=args.record,
                 fps=settings.recording.fps,
                 codec=settings.recording.codec,
+            )
+        if args.context_validator is not None:
+            updates["context_validator"] = settings.context_validator.model_copy(
+                update={"kind": args.context_validator},
             )
         settings = settings.model_copy(update=updates)
 

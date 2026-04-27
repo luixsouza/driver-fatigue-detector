@@ -29,6 +29,42 @@ class ThresholdsSettings(BaseModel):
     mar_threshold: float = 0.60
     consecutive_frames: int = 20
     warning_ratio: float = 0.85
+    recovery_frames: int = 10
+    min_alert_duration_frames: int = 5
+    alarm_cooldown_seconds: float = 5.0
+    yawn_window_frames: int = 45
+    yawn_stability_max: float = 0.04
+
+
+class CalibrationSettingsModel(BaseModel):
+    enabled: bool = True
+    warmup_frames: int = 60
+    ear_close_ratio: float = 0.75
+    mar_open_zscore: float = 2.5
+
+
+class FrameQualitySettings(BaseModel):
+    enabled: bool = True
+    min_face_confidence: float = 0.5
+    min_face_area_ratio: float = 0.05
+    max_head_yaw_deg: float = 35.0
+    max_head_pitch_deg: float = 25.0
+
+
+class SoundSinkSettings(BaseModel):
+    start_volume: float = 0.4
+    peak_volume: float = 1.0
+    ramp_seconds: float = 1.5
+    cooldown_seconds: float = 2.0
+
+
+class ContextValidatorSettings(BaseModel):
+    kind: Literal["noop", "eye_state"] = "noop"
+    min_confidence: float = 0.6
+    fail_safe_on_error: Literal["alarm", "suppress"] = "alarm"
+    perclos_window_seconds: float = 60.0
+    perclos_threshold: float = 0.4
+    eye_state_model_path: Path | None = None
 
 
 class ThemeSettings(BaseModel):
@@ -72,14 +108,18 @@ class AppSettings(BaseSettings):
 
     source: SourceSettings = Field(default_factory=SourceSettings)
     thresholds: ThresholdsSettings = Field(default_factory=ThresholdsSettings)
+    calibration: CalibrationSettingsModel = Field(default_factory=CalibrationSettingsModel)
+    frame_quality: FrameQualitySettings = Field(default_factory=FrameQualitySettings)
     theme: ThemeSettings = Field(default_factory=ThemeSettings)
     alarm_sound_path: Path = Path("audio/alarm.wav")
+    sound_sink: SoundSinkSettings = Field(default_factory=SoundSinkSettings)
     headless: bool = False
 
     sinks: list[SinkName] = Field(default_factory=lambda: ["sound", "log"])
     http_webhook: HttpWebhookSettings | None = None
     mqtt: MqttSettings | None = None
     recording: RecordingSettings = Field(default_factory=RecordingSettings)
+    context_validator: ContextValidatorSettings = Field(default_factory=ContextValidatorSettings)
 
     @model_validator(mode="after")
     def _check_sink_configs(self) -> "AppSettings":
