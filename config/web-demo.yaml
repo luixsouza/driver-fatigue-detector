@@ -1,23 +1,28 @@
-# Config pro modo `driver-fatigue web` — sensível e sem efeitos pesados.
-# Usa thresholds absolutos para feedback imediato durante demonstração.
+# Config pro modo `driver-fatigue web` — discrimina piscada de sonolência.
+#
+# Piscada normal: olho fica fechado ~100-200ms (EAR cai pra ~0.18).
+# Sonolência real: olho fica fechado >800ms (consecutive_frames >= 25 a 30fps).
 
 source:
   kind: webcam
   index: 0
 
 thresholds:
-  ear_threshold: 0.23
-  mar_threshold: 0.55
-  consecutive_frames: 8       # ~0.3s @ 30fps — alerta rápido pra demo
-  warning_ratio: 0.5
-  recovery_frames: 6
-  min_alert_duration_frames: 0
-  alarm_cooldown_seconds: 1.5
+  ear_threshold: 0.19           # piscadas tipicamente nao caem abaixo disso
+  mar_threshold: 0.65           # bocejo de verdade (boca bem aberta)
+  consecutive_frames: 25        # ~0.85s @ 30fps — descarta piscada
+  warning_ratio: 0.6            # warning quando passa 60% (~0.5s)
+  recovery_frames: 8            # exige 8 frames "limpos" antes de sair
+  min_alert_duration_frames: 5  # alarme dura pelo menos 5 frames
+  alarm_cooldown_seconds: 4.0   # nao rebipa imediato apos recovery
   yawn_window_frames: 30
-  yawn_stability_max: 0.06
+  yawn_stability_max: 0.05      # bocejo = MAR alto E estavel (fala = instavel)
 
 calibration:
-  enabled: false              # demo: thresholds absolutos, sem warmup
+  enabled: true
+  warmup_frames: 45             # ~1.5s de calibracao individual
+  ear_close_ratio: 0.65         # EAR < 65% do baseline = olho fechado
+  mar_open_zscore: 3.0          # MAR > baseline + 3*std = boca aberta
 
 frame_quality:
   enabled: true
@@ -27,7 +32,7 @@ frame_quality:
   max_head_pitch_deg: 35.0
 
 theme:
-  glow_enabled: false         # imagem natural, sem estouro
+  glow_enabled: false           # imagem natural, sem estouro
   show_hud: true
   show_face_oval: true
   smoothing_steps: 8
@@ -38,17 +43,17 @@ alarm_sound_path: audio/alarm.wav
 sound_sink:
   start_volume: 0.5
   peak_volume: 0.9
-  ramp_seconds: 1.0
-  cooldown_seconds: 2.0
+  ramp_seconds: 1.2
+  cooldown_seconds: 3.0
 
 headless: true
-sinks: [log]                  # http é injetado pelo --dashboard
+sinks: [log]                    # http injetado pelo --dashboard
 
 context_validator:
   kind: noop
 
 dashboard_stream:
-  enabled: false              # ligado pelo --dashboard
+  enabled: false                # ligado pelo --dashboard
 
 recording:
   path: null

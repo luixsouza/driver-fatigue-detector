@@ -393,7 +393,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Driver Fatigue · Live Monitor</h1>
-          <small>Sistemas Ubíquos · stream + alertas remotos</small>
+          <small>Sistemas Ubíquos · vídeo + alertas em tempo real</small>
         </div>
       </div>
       <span id="conn" class="conn"><span class="dot"></span><span id="connLabel">aguardando…</span></span>
@@ -438,7 +438,7 @@
             <div class="progress" id="progress"><div></div></div>
             <div class="progress-meta">
               <span>Frames consec.</span>
-              <span><span id="progressNum">0</span> / 30</span>
+              <span><span id="progressNum">0</span> / 25</span>
             </div>
           </div>
           <div class="metrics">
@@ -547,28 +547,52 @@
     }).join("");
   }
 
+  function updateLiveMetrics(payload) {
+    if (payload.ear !== undefined) {
+      mEar.textContent = (+payload.ear).toFixed(2);
+      ovEar.textContent = (+payload.ear).toFixed(2);
+    }
+    if (payload.mar !== undefined) {
+      mMar.textContent = (+payload.mar).toFixed(2);
+      ovMar.textContent = (+payload.mar).toFixed(2);
+    }
+    if (payload.consecutive_frames !== undefined) {
+      setProgress(payload.consecutive_frames, 25);
+    }
+  }
+
   function ingest(payload) {
     if (!payload || !payload.event) return;
-    pushEvent(payload);
     lastTs.textContent = fmtTime(payload.received_at || payload.timestamp);
+
+    if (payload.event === "state") {
+      // heartbeat continuo: atualiza metrics + severity sem poluir timeline
+      updateLiveMetrics(payload);
+      const sev = payload.severity || "normal";
+      if (payload.calibrating) {
+        statusHead.textContent = "Calibrando…";
+        statusIcon.classList.remove("warning", "alert");
+        statusIcon.innerHTML = ICON_NORMAL;
+      } else {
+        setSeverity(sev, payload);
+      }
+      if (!payload.quality_ok && payload.quality_reason) {
+        statusHead.textContent = "Frame ruim";
+      }
+      return;
+    }
+
+    pushEvent(payload);
     if (payload.event === "fatigue_alert") {
       counters.alerts += 1;
       mAlerts.textContent = counters.alerts;
       setSeverity(payload.severity || "alert", payload);
-      if (payload.ear !== undefined) {
-        mEar.textContent = (+payload.ear).toFixed(2);
-        ovEar.textContent = (+payload.ear).toFixed(2);
-      }
-      if (payload.mar !== undefined) {
-        mMar.textContent = (+payload.mar).toFixed(2);
-        ovMar.textContent = (+payload.mar).toFixed(2);
-      }
-      setProgress(payload.consecutive_frames || 0, 30);
+      updateLiveMetrics(payload);
     } else if (payload.event === "fatigue_recovery") {
       counters.recoveries += 1;
       mRec.textContent = counters.recoveries;
       setSeverity("normal", payload);
-      setProgress(0, 30);
+      setProgress(0, 25);
     }
   }
 

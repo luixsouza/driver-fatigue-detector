@@ -47,6 +47,26 @@ class HttpWebhookSink:
         }
         self._post(payload)
 
+    def publish_state(self, frame, state) -> None:
+        """Heartbeat pro dashboard: estado atual a cada N frames."""
+        baseline = state.baseline
+        payload = {
+            "event": "state",
+            "timestamp": frame.timestamp,
+            "frame_index": frame.index,
+            "ear": state.ear,
+            "mar": state.mar,
+            "severity": state.severity,
+            "consecutive_frames": state.consecutive_frames,
+            "calibrating": (
+                baseline.sample_count > 0 and baseline.sample_count < 30
+            ),
+            "calibration_progress": min(1.0, baseline.sample_count / 45.0),
+            "quality_ok": state.quality.trustworthy,
+            "quality_reason": state.quality.reason,
+        }
+        self._post(payload)
+
     def _post(self, payload: dict) -> None:
         try:
             response = self._client.post(self._url, json=payload)

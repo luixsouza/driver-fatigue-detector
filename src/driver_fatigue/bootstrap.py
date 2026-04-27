@@ -220,9 +220,24 @@ def build_monitor_use_case(
     renderer = _build_renderer(settings)
     presenter = _build_presenter(settings, renderer)
     validator = validator_override if validator_override is not None else _build_validator(settings)
+    state_publisher = _resolve_state_publisher(sink)
     return MonitorDriverUseCase(
         source=source, detect=detect, sink=sink, presenter=presenter,
         context_validator=validator,
         min_validator_confidence=settings.context_validator.min_confidence,
         fail_safe_on_error=settings.context_validator.fail_safe_on_error,
+        state_publisher=state_publisher,
     )
+
+
+def _resolve_state_publisher(sink):
+    """Desempacota CompositeSink procurando alguém com publish_state."""
+    candidates = []
+    if hasattr(sink, "_sinks"):  # CompositeSink
+        candidates.extend(sink._sinks)
+    else:
+        candidates.append(sink)
+    for s in candidates:
+        if hasattr(s, "publish_state"):
+            return s.publish_state
+    return None

@@ -25,6 +25,8 @@ class MonitorDriverUseCase:
         context_validator: ContextValidatorPort | None = None,
         min_validator_confidence: float = 0.6,
         fail_safe_on_error: str = "alarm",
+        state_publisher = None,
+        state_publish_every_frames: int = 6,
     ) -> None:
         self._source = source
         self._detect = detect
@@ -33,6 +35,8 @@ class MonitorDriverUseCase:
         self._validator = context_validator
         self._min_confidence = min_validator_confidence
         self._fail_safe_on_error = fail_safe_on_error
+        self._state_publisher = state_publisher
+        self._state_publish_every = max(1, state_publish_every_frames)
 
     def run(self) -> None:
         state = FatigueState.initial()
@@ -48,6 +52,14 @@ class MonitorDriverUseCase:
                     frame=frame,
                     faces=faces,
                 )
+                if (
+                    self._state_publisher is not None
+                    and frame.index % self._state_publish_every == 0
+                ):
+                    try:
+                        self._state_publisher(frame, new_state)
+                    except Exception as exc:  # publisher é best-effort
+                        _log.debug("state publisher falhou: %s", exc)
                 self._presenter.present(frame, faces, new_state)
                 state = new_state
         finally:
