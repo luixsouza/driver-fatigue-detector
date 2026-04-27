@@ -8,10 +8,26 @@ from driver_fatigue.domain.entities import Frame
 
 
 class WebcamVideoSource:
-    def __init__(self, device_index: int = 0) -> None:
+    def __init__(
+        self,
+        device_index: int = 0,
+        *,
+        width: int = 1280,
+        height: int = 720,
+        fps: int = 30,
+    ) -> None:
         self._cap = cv2.VideoCapture(device_index)
         if not self._cap.isOpened():
             raise RuntimeError(f"Não foi possível abrir webcam {device_index}")
+        # Pede HD; se a câmera não suportar, OpenCV silenciosamente cai pra closest.
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        self._cap.set(cv2.CAP_PROP_FPS, fps)
+        # Buffer pequeno reduz latência de webcam (frame mais recente).
+        try:
+            self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        except Exception:
+            pass
         self._index = 0
         self._released = False
 

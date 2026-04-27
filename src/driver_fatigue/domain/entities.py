@@ -48,6 +48,7 @@ class FatigueState:
     baseline: PersonalBaseline = field(default_factory=PersonalBaseline.empty)
     quality: FrameQuality = field(default_factory=lambda: FrameQuality.trusted())
     mar_window: tuple[float, ...] = ()
+    head_drop_frames: int = 0
 
     @classmethod
     def initial(cls) -> "FatigueState":
@@ -63,6 +64,7 @@ class FatigueState:
             baseline=PersonalBaseline.empty(),
             quality=FrameQuality.trusted(),
             mar_window=(),
+            head_drop_frames=0,
         )
 
 

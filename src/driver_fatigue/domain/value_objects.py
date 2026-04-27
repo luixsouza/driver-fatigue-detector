@@ -16,6 +16,8 @@ class FatigueThresholds:
     alarm_cooldown_seconds: float = 0.0
     yawn_window_frames: int = 45
     yawn_stability_max: float = 1e9  # default permissivo: qualquer std passa
+    head_drop_pitch_deg: float = 25.0       # cabeça caindo a partir desse pitch
+    head_drop_frames_threshold: int = 30    # frames sustentados pra contar como sonolência
 
     def __post_init__(self) -> None:
         if not 0.0 < self.warning_ratio <= 1.0:

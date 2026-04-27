@@ -70,8 +70,8 @@ class ContextValidatorSettings(BaseModel):
 class DashboardStreamSettings(BaseModel):
     enabled: bool = False
     push_url: str = "http://127.0.0.1:8000/api/video/push"
-    jpeg_quality: int = 70
-    max_fps: float = 15.0
+    jpeg_quality: int = 88
+    max_fps: float = 30.0
 
 
 class ThemeSettings(BaseModel):

@@ -76,7 +76,9 @@ def evaluate_fatigue(
     timestamp: float | None = None,
 ) -> FatigueState:
     q = quality if quality is not None else FrameQuality.trusted()
-    if not q.trustworthy:
+    # Frame ruim por pitch alto NÃO é descartado — é evidência de cabeça caindo.
+    pitch_drop = abs(q.head_pitch_deg) >= thresholds.head_drop_pitch_deg
+    if not q.trustworthy and not pitch_drop:
         return _replace(previous, quality=q)
 
     left_ear = eye_aspect_ratio(landmarks.left_eye_contour)
@@ -106,7 +108,10 @@ def evaluate_fatigue(
         previous.mar_window, mar, mar_threshold,
         thresholds.yawn_window_frames, thresholds.yawn_stability_max,
     )
-    triggered = eyes_closed or yawning
+    # Cabeça caindo: pitch alto sustentado = motorista cabeceando.
+    head_drop = previous.head_drop_frames + 1 if pitch_drop else 0
+    head_dropped = head_drop >= thresholds.head_drop_frames_threshold
+    triggered = eyes_closed or yawning or head_dropped
 
     alert_cutoff = max(int(thresholds.consecutive_frames * thresholds.warning_ratio), 1)
     last_alert_ts = previous.last_alert_timestamp
@@ -170,6 +175,7 @@ def evaluate_fatigue(
         baseline=baseline,
         quality=q,
         mar_window=_push_window(previous.mar_window, mar, thresholds.yawn_window_frames),
+        head_drop_frames=head_drop,
     )
 
 
@@ -186,4 +192,5 @@ def _replace(state: FatigueState, **changes) -> FatigueState:
         baseline=changes.get("baseline", state.baseline),
         quality=changes.get("quality", state.quality),
         mar_window=changes.get("mar_window", state.mar_window),
+        head_drop_frames=changes.get("head_drop_frames", state.head_drop_frames),
     )

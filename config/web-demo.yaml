@@ -1,42 +1,42 @@
-# Config pro modo `driver-fatigue web` — discrimina piscada de sonolência.
-#
-# Piscada normal: olho fica fechado ~100-200ms (EAR cai pra ~0.18).
-# Sonolência real: olho fica fechado >800ms (consecutive_frames >= 25 a 30fps).
+# Config pro modo `driver-fatigue web` — discrimina piscada de sonolência,
+# detecta cabeceio de motorista, stream HD a 30fps.
 
 source:
   kind: webcam
   index: 0
 
 thresholds:
-  ear_threshold: 0.19           # piscadas tipicamente nao caem abaixo disso
-  mar_threshold: 0.65           # bocejo de verdade (boca bem aberta)
-  consecutive_frames: 25        # ~0.85s @ 30fps — descarta piscada
-  warning_ratio: 0.6            # warning quando passa 60% (~0.5s)
-  recovery_frames: 8            # exige 8 frames "limpos" antes de sair
-  min_alert_duration_frames: 5  # alarme dura pelo menos 5 frames
-  alarm_cooldown_seconds: 4.0   # nao rebipa imediato apos recovery
-  yawn_window_frames: 30
-  yawn_stability_max: 0.05      # bocejo = MAR alto E estavel (fala = instavel)
+  ear_threshold: 0.19
+  mar_threshold: 0.65
+  consecutive_frames: 22        # ~0.75s @ 30fps
+  warning_ratio: 0.55
+  recovery_frames: 6
+  min_alert_duration_frames: 5
+  alarm_cooldown_seconds: 5.0
+  yawn_window_frames: 25
+  yawn_stability_max: 0.05
+  head_drop_pitch_deg: 22.0     # cabeça caindo a partir de 22°
+  head_drop_frames_threshold: 25
 
 calibration:
   enabled: true
-  warmup_frames: 45             # ~1.5s de calibracao individual
-  ear_close_ratio: 0.65         # EAR < 65% do baseline = olho fechado
-  mar_open_zscore: 3.0          # MAR > baseline + 3*std = boca aberta
+  warmup_frames: 45
+  ear_close_ratio: 0.55         # 55% do EAR base = olho fechado (mais permissivo)
+  mar_open_zscore: 3.0
 
 frame_quality:
   enabled: true
   min_face_confidence: 0.4
   min_face_area_ratio: 0.02
-  max_head_yaw_deg: 45.0
-  max_head_pitch_deg: 35.0
+  max_head_yaw_deg: 50.0
+  max_head_pitch_deg: 40.0      # acima disso o evaluator usa como evidência
 
 theme:
-  glow_enabled: false           # imagem natural, sem estouro
+  glow_enabled: false
   show_hud: true
   show_face_oval: true
-  smoothing_steps: 8
-  overlay_alpha: 0.18
+  smoothing_steps: 12
+  overlay_alpha: 0.20
 
 alarm_sound_path: audio/alarm.wav
 
@@ -47,13 +47,15 @@ sound_sink:
   cooldown_seconds: 3.0
 
 headless: true
-sinks: [log]                    # http injetado pelo --dashboard
+sinks: [log]
 
 context_validator:
   kind: noop
 
 dashboard_stream:
-  enabled: false                # ligado pelo --dashboard
+  enabled: false
+  jpeg_quality: 88
+  max_fps: 30.0
 
 recording:
   path: null
