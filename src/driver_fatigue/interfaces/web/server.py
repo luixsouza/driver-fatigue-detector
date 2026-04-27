@@ -109,21 +109,22 @@ class _Handler(BaseHTTPRequestHandler):
         _log.debug("%s - " + format, self.address_string(), *args)
 
     def do_GET(self) -> None:  # noqa: N802
-        if self.path == "/" or self.path == "/index.html":
+        path = self.path.split("?", 1)[0].split("#", 1)[0]
+        if path == "/" or path == "/index.html":
             self._serve_static("index.html", "text/html; charset=utf-8")
             return
-        if self.path.startswith("/static/"):
-            name = self.path[len("/static/") :]
+        if path.startswith("/static/"):
+            name = path[len("/static/") :]
             mime = self._guess_mime(name)
             self._serve_static(name, mime)
             return
-        if self.path == "/api/stream":
+        if path == "/api/stream":
             self._serve_sse()
             return
-        if self.path == "/api/video":
+        if path == "/api/video":
             self._serve_mjpeg()
             return
-        if self.path == "/api/health":
+        if path == "/api/health":
             self._json(200, {
                 "ok": True,
                 "subscribers": len(_subscribers),
@@ -136,6 +137,8 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_error(404, "not found")
 
     def do_POST(self) -> None:  # noqa: N802
+        path = self.path.split("?", 1)[0].split("#", 1)[0]
+        self.path = path
         if self.path == "/api/events":
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0:
