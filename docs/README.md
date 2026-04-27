@@ -46,6 +46,25 @@ driver-fatigue run --sinks sound,log,http --config config/default.yaml
 python -m driver_fatigue run --source webcam:0
 ```
 
+## Dashboard web em tempo real (ubiquidade)
+
+Sobe um dashboard que recebe eventos do detector via webhook HTTP e os mostra
+ao vivo via Server-Sent Events. O detector pode rodar em uma máquina e o
+dashboard ser aberto em qualquer browser na rede — mesma arquitetura, sem
+acoplamento extra.
+
+```bash
+# terminal 1 — dashboard (sem deps adicionais, só stdlib)
+driver-fatigue web --port 8000
+
+# terminal 2 — detector apontando o webhook pra esse servidor
+DRIVER_FATIGUE_HTTP_WEBHOOK__URL=http://localhost:8000/api/events \
+  driver-fatigue run --sinks log,http --config config/default.yaml
+```
+
+Abra `http://localhost:8000/` no browser — alertas e recuperações chegam em
+tempo real, sem reload.
+
 ## Configuração
 
 Suporta YAML e variáveis de ambiente (prefixo `DRIVER_FATIGUE_`).

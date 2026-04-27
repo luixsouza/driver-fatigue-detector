@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Driver Fatigue — Live Dashboard</title>
+<style>
+  :root {
+    --bg-0: #07090d;
+    --bg-1: #0e1218;
+    --bg-2: #161b24;
+    --line: #1f2632;
+    --text-0: #e8edf5;
+    --text-1: #99a3b3;
+    --text-2: #5a6677;
+    --normal: #58c98c;
+    --warning: #f3b94d;
+    --alert: #ff5470;
+    --accent: #62a8ff;
+    --shadow: 0 24px 48px -12px rgba(0,0,0,.55);
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(98,168,255,.06), transparent 60%),
+      radial-gradient(800px 600px at -10% 110%, rgba(255,84,112,.05), transparent 50%),
+      var(--bg-0);
+    color: var(--text-0);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100%;
+  }
+  .layout {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+  }
+  header.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand .logo {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1a3158 0%, #62a8ff 100%);
+    display: grid; place-items: center;
+    box-shadow: var(--shadow);
+  }
+  .brand .logo svg { width: 22px; height: 22px; }
+  .brand h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .brand small {
+    display: block;
+    font-size: 12px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+  .conn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    background: var(--bg-1);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--text-1);
+  }
+  .conn .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-2);
+    box-shadow: 0 0 0 0 rgba(0,0,0,0);
+  }
+  .conn.live .dot {
+    background: var(--normal);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .conn.alert .dot { background: var(--alert); }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(88,201,140,.5); }
+    70%  { box-shadow: 0 0 0 12px rgba(88,201,140,0); }
+    100% { box-shadow: 0 0 0 0 rgba(88,201,140,0); }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px;
+  }
+  @media (max-width: 880px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-2);
+    margin: 0 0 16px;
+  }
+
+  .driver-state {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    min-height: 360px;
+  }
+  .severity-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .severity-pill {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    padding: 6px 12px;
+    border-radius: 999px;
+    color: var(--normal);
+    background: rgba(88,201,140,.12);
+    border: 1px solid rgba(88,201,140,.3);
+  }
+  .severity-pill.warning {
+    color: var(--warning);
+    background: rgba(243,185,77,.10);
+    border-color: rgba(243,185,77,.3);
+  }
+  .severity-pill.alert {
+    color: var(--alert);
+    background: rgba(255,84,112,.12);
+    border-color: rgba(255,84,112,.4);
+  }
+  .severity-headline {
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .severity-sub {
+    color: var(--text-1);
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 36ch;
+  }
+
+  .ring-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 16px;
+  }
+  .ring {
+    position: relative;
+    width: 220px;
+    height: 220px;
+  }
+  .ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .ring .track { stroke: var(--line); }
+  .ring .progress {
+    stroke: var(--normal);
+    stroke-linecap: round;
+    transition: stroke-dashoffset .35s ease, stroke .25s ease;
+  }
+  .ring .progress.warning { stroke: var(--warning); }
+  .ring .progress.alert   { stroke: var(--alert); }
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+  .ring-center .num {
+    font-size: 44px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .ring-center .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .metric {
+    background: rgba(255,255,255,.02);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .metric .l {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-2);
+    margin-bottom: 6px;
+  }
+  .metric .v {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .metric .v small {
+    font-size: 12px;
+    color: var(--text-1);
+    margin-left: 6px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .timeline::-webkit-scrollbar { width: 6px; }
+  .timeline::-webkit-scrollbar-thumb {
+    background: var(--line); border-radius: 3px;
+  }
+  .ev {
+    display: grid;
+    grid-template-columns: 6px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 14px;
+    background: rgba(255,255,255,.02);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .ev .stripe {
+    width: 6px;
+    height: 100%;
+    min-height: 32px;
+    background: var(--text-2);
+    border-radius: 3px;
+  }
+  .ev.alert .stripe    { background: var(--alert); }
+  .ev.recovery .stripe { background: var(--normal); }
+  .ev.warning .stripe  { background: var(--warning); }
+  .ev .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .ev .title {
+    font-size: 13px; font-weight: 600;
+  }
+  .ev .meta {
+    font-size: 12px; color: var(--text-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .ev .ts {
+    font-size: 11px;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .empty {
+    color: var(--text-2);
+    font-size: 13px;
+    padding: 20px 4px;
+    text-align: center;
+  }
+
+  .footer {
+    margin-top: 24px;
+    color: var(--text-2);
+    font-size: 12px;
+    text-align: center;
+  }
+  .footer code {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text-1);
+  }
+
+  body.alert-flash {
+    animation: flash .55s ease 0s 3;
+  }
+  @keyframes flash {
+    0%, 100% { background-color: var(--bg-0); }
+    50%      { background-color: rgba(255,84,112,.06); }
+  }
+</style>
+</head>
+<body>
+  <div class="layout">
+    <header class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M3 12h6l2 -3l2 6l2 -3h6"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Driver Fatigue — Live Monitor</h1>
+          <small>Sistemas Ubíquos · dashboard remoto via webhook</small>
+        </div>
+      </div>
+      <span id="conn" class="conn"><span class="dot"></span><span id="connLabel">aguardando…</span></span>
+    </header>
+
+    <div class="grid">
+      <section class="card driver-state">
+        <h2>Estado do motorista</h2>
+        <div class="severity-block">
+          <span id="sevPill" class="severity-pill">Normal</span>
+          <div>
+            <div id="sevHeadline" class="severity-headline">Aguardando dados…</div>
+            <div id="sevSub" class="severity-sub">Inicie o detector apontando o webhook para <code>/api/events</code>.</div>
+          </div>
+        </div>
+
+        <div class="ring-wrap">
+          <div class="ring">
+            <svg viewBox="0 0 100 100">
+              <circle class="track" cx="50" cy="50" r="42" fill="none" stroke-width="6"/>
+              <circle id="ring" class="progress" cx="50" cy="50" r="42" fill="none" stroke-width="6"
+                      stroke-dasharray="263.89" stroke-dashoffset="263.89"/>
+            </svg>
+            <div class="ring-center">
+              <div id="ringNum" class="num">0</div>
+              <div class="label">Frames consec.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="l">EAR</div>
+            <div class="v"><span id="mEar">—</span></div>
+          </div>
+          <div class="metric">
+            <div class="l">MAR</div>
+            <div class="v"><span id="mMar">—</span></div>
+          </div>
+          <div class="metric">
+            <div class="l">Alertas (sessão)</div>
+            <div class="v"><span id="mAlerts">0</span><small>recuperações <span id="mRec">0</span></small></div>
+          </div>
+          <div class="metric">
+            <div class="l">Último evento</div>
+            <div class="v"><span id="mLast">—</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Linha do tempo</h2>
+        <div id="timeline" class="timeline">
+          <div class="empty">Nenhum evento ainda. Quando o detector disparar um alerta, ele aparece aqui em tempo real.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      Detector → <code>POST /api/events</code> → SSE em <code>/api/stream</code> · prova de ubiquidade do mesmo domínio
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const sevPill   = $("sevPill");
+  const sevHead   = $("sevHeadline");
+  const sevSub    = $("sevSub");
+  const ring      = $("ring");
+  const ringNum   = $("ringNum");
+  const mEar      = $("mEar");
+  const mMar      = $("mMar");
+  const mAlerts   = $("mAlerts");
+  const mRec      = $("mRec");
+  const mLast     = $("mLast");
+  const timeline  = $("timeline");
+  const conn      = $("conn");
+  const connLabel = $("connLabel");
+
+  const RING_C = 2 * Math.PI * 42;
+  ring.setAttribute("stroke-dasharray", RING_C.toFixed(2));
+  ring.setAttribute("stroke-dashoffset", RING_C.toFixed(2));
+
+  let counters = { alerts: 0, recoveries: 0 };
+  const events = [];
+
+  function setConn(state, label) {
+    conn.classList.remove("live", "alert");
+    if (state) conn.classList.add(state);
+    connLabel.textContent = label;
+  }
+
+  function fmtTs(ts) {
+    if (!ts) return "—";
+    const d = new Date(ts * 1000);
+    return d.toLocaleTimeString("pt-BR", { hour12: false });
+  }
+
+  function setSeverity(sev) {
+    sevPill.className = "severity-pill" + (sev !== "normal" ? " " + sev : "");
+    if (sev === "alert") {
+      sevPill.textContent = "Alerta";
+      sevHead.textContent = "Motorista sonolento";
+      sevSub.textContent = "Sinais persistentes de fadiga detectados. Recomenda-se parar o veículo.";
+      document.body.classList.remove("alert-flash");
+      void document.body.offsetWidth;
+      document.body.classList.add("alert-flash");
+    } else if (sev === "warning") {
+      sevPill.textContent = "Atenção";
+      sevHead.textContent = "Sinais de fadiga";
+      sevSub.textContent = "Indícios pontuais de cansaço. Continue monitorando.";
+    } else {
+      sevPill.textContent = "Normal";
+      sevHead.textContent = "Motorista atento";
+      sevSub.textContent = "Tudo dentro dos parâmetros.";
+    }
+  }
+
+  function setRing(consecutive, max, sev) {
+    const ratio = Math.max(0, Math.min(1, (consecutive || 0) / Math.max(1, max || 30)));
+    ring.setAttribute("stroke-dashoffset", (RING_C * (1 - ratio)).toFixed(2));
+    ring.classList.remove("warning", "alert");
+    if (sev === "warning") ring.classList.add("warning");
+    if (sev === "alert")   ring.classList.add("alert");
+    ringNum.textContent = String(consecutive ?? 0);
+  }
+
+  function pushEvent(ev) {
+    events.unshift(ev);
+    if (events.length > 80) events.pop();
+    renderTimeline();
+  }
+
+  function renderTimeline() {
+    if (events.length === 0) {
+      timeline.innerHTML = '<div class="empty">Nenhum evento ainda.</div>';
+      return;
+    }
+    timeline.innerHTML = events.map(e => {
+      const kind = e.event === "fatigue_alert" ? "alert"
+                : e.event === "fatigue_recovery" ? "recovery"
+                : "warning";
+      const title = e.event === "fatigue_alert"     ? "Alerta de fadiga emitido"
+                  : e.event === "fatigue_recovery"  ? "Motorista recuperou estado normal"
+                  : (e.event || "evento");
+      const meta = [];
+      if (e.ear !== undefined) meta.push("EAR " + (+e.ear).toFixed(2));
+      if (e.mar !== undefined) meta.push("MAR " + (+e.mar).toFixed(2));
+      if (e.consecutive_frames !== undefined) meta.push("conseq " + e.consecutive_frames);
+      if (e.frame_index !== undefined) meta.push("frame #" + e.frame_index);
+      const ts = fmtTs(e.received_at || e.timestamp);
+      return `<div class="ev ${kind}">
+        <div class="stripe"></div>
+        <div class="body">
+          <div class="title">${title}</div>
+          <div class="meta">${meta.join(" · ")}</div>
+        </div>
+        <div class="ts">${ts}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function ingest(payload) {
+    if (!payload || !payload.event) return;
+    pushEvent(payload);
+    mLast.textContent = fmtTs(payload.received_at || payload.timestamp);
+
+    if (payload.event === "fatigue_alert") {
+      counters.alerts += 1;
+      mAlerts.textContent = counters.alerts;
+      setSeverity(payload.severity || "alert");
+      if (payload.ear !== undefined) mEar.textContent = (+payload.ear).toFixed(2);
+      if (payload.mar !== undefined) mMar.textContent = (+payload.mar).toFixed(2);
+      setRing(payload.consecutive_frames, 30, payload.severity || "alert");
+    } else if (payload.event === "fatigue_recovery") {
+      counters.recoveries += 1;
+      mRec.textContent = counters.recoveries;
+      setSeverity("normal");
+      setRing(0, 30, "normal");
+    }
+  }
+
+  function connect() {
+    setConn(null, "conectando…");
+    let es;
+    try {
+      es = new EventSource("/api/stream");
+    } catch (err) {
+      setConn("alert", "falha");
+      setTimeout(connect, 3000);
+      return;
+    }
+    es.onopen = () => setConn("live", "conectado");
+    es.onmessage = (msg) => {
+      try { ingest(JSON.parse(msg.data)); } catch (_) {}
+    };
+    es.onerror = () => {
+      setConn("alert", "reconectando…");
+      es.close();
+      setTimeout(connect, 2000);
+    };
+  }
+  connect();
+})();
+</script>
+</body>
+</html>

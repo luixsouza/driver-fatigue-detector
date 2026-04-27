@@ -1,0 +1,206 @@
+"""Servidor web do dashboard.
+
+Recebe eventos do detector via HTTP webhook (POST /api/events) e os
+distribui para todos os browsers conectados via Server-Sent Events
+(GET /api/stream). Serve a página HTML estática em /.
+
+Stack mínimo da stdlib: nenhuma dep extra além do que ja temos no
+projeto. Usa http.server + threading + fila por cliente.
+
+Uso:
+    python -m driver_fatigue.interfaces.web.server --host 0.0.0.0 --port 8000
+
+E aponta o detector para esse servidor:
+    DRIVER_FATIGUE_HTTP_WEBHOOK__URL=http://localhost:8000/api/events
+    driver-fatigue run --sinks log,http
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import queue
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+
+_log = logging.getLogger("driver_fatigue.web")
+STATIC_DIR = Path(__file__).parent / "static"
+
+_subscribers_lock = threading.Lock()
+_subscribers: list[queue.Queue] = []
+_last_event: dict[str, Any] | None = None
+
+
+def _broadcast(event: dict[str, Any]) -> None:
+    global _last_event
+    _last_event = event
+    with _subscribers_lock:
+        dead: list[queue.Queue] = []
+        for q in _subscribers:
+            try:
+                q.put_nowait(event)
+            except queue.Full:
+                dead.append(q)
+        for q in dead:
+            _subscribers.remove(q)
+
+
+def _subscribe() -> queue.Queue:
+    q: queue.Queue = queue.Queue(maxsize=200)
+    with _subscribers_lock:
+        _subscribers.append(q)
+    return q
+
+
+def _unsubscribe(q: queue.Queue) -> None:
+    with _subscribers_lock:
+        if q in _subscribers:
+            _subscribers.remove(q)
+
+
+class _Handler(BaseHTTPRequestHandler):
+    server_version = "DriverFatigueWeb/1.0"
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A002
+        _log.debug("%s - " + format, self.address_string(), *args)
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path == "/" or self.path == "/index.html":
+            self._serve_static("index.html", "text/html; charset=utf-8")
+            return
+        if self.path.startswith("/static/"):
+            name = self.path[len("/static/") :]
+            mime = self._guess_mime(name)
+            self._serve_static(name, mime)
+            return
+        if self.path == "/api/stream":
+            self._serve_sse()
+            return
+        if self.path == "/api/health":
+            self._json(200, {"ok": True, "subscribers": len(_subscribers)})
+            return
+        self.send_error(404, "not found")
+
+    def do_POST(self) -> None:  # noqa: N802
+        if self.path != "/api/events":
+            self.send_error(404, "not found")
+            return
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0:
+            self.send_error(400, "empty body")
+            return
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            self.send_error(400, f"invalid json: {exc}")
+            return
+        payload.setdefault("received_at", time.time())
+        _broadcast(payload)
+        self._json(202, {"status": "accepted"})
+
+    def _serve_static(self, name: str, mime: str) -> None:
+        target = (STATIC_DIR / name).resolve()
+        try:
+            target.relative_to(STATIC_DIR.resolve())
+        except ValueError:
+            self.send_error(403, "forbidden")
+            return
+        if not target.exists() or not target.is_file():
+            self.send_error(404, "not found")
+            return
+        body = target.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _guess_mime(self, name: str) -> str:
+        if name.endswith(".html"):
+            return "text/html; charset=utf-8"
+        if name.endswith(".js"):
+            return "application/javascript; charset=utf-8"
+        if name.endswith(".css"):
+            return "text/css; charset=utf-8"
+        if name.endswith(".json"):
+            return "application/json"
+        return "application/octet-stream"
+
+    def _json(self, status: int, body: dict) -> None:
+        data = json.dumps(body).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _serve_sse(self) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+        q = _subscribe()
+        try:
+            if _last_event is not None:
+                self._sse_send(_last_event)
+            last_ping = time.monotonic()
+            while True:
+                try:
+                    event = q.get(timeout=15.0)
+                    self._sse_send(event)
+                except queue.Empty:
+                    pass
+                if time.monotonic() - last_ping > 15.0:
+                    try:
+                        self.wfile.write(b": ping\n\n")
+                        self.wfile.flush()
+                    except (BrokenPipeError, ConnectionResetError):
+                        return
+                    last_ping = time.monotonic()
+        except (BrokenPipeError, ConnectionResetError):
+            return
+        finally:
+            _unsubscribe(q)
+
+    def _sse_send(self, event: dict) -> None:
+        line = f"data: {json.dumps(event)}\n\n".encode("utf-8")
+        try:
+            self.wfile.write(line)
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            raise
+
+
+def serve(host: str = "0.0.0.0", port: int = 8000) -> None:
+    httpd = ThreadingHTTPServer((host, port), _Handler)
+    print(f"Driver Fatigue dashboard rodando em http://{host}:{port}")
+    print(f"Configure o detector com webhook:  http://{host}:{port}/api/events")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nFinalizando...")
+        httpd.shutdown()
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(prog="driver-fatigue-web")
+    p.add_argument("--host", default="0.0.0.0")
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--verbose", "-v", action="store_true")
+    args = p.parse_args(argv)
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    serve(host=args.host, port=args.port)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
