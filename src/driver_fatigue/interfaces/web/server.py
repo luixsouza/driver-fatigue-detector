@@ -281,6 +281,7 @@ def _spawn_detector(
     *,
     target_url: str,
     source: str,
+    config: str | None = None,
     extra_args: list[str] | None = None,
 ) -> subprocess.Popen:
     cmd = [
@@ -290,6 +291,13 @@ def _spawn_detector(
         "--dashboard", target_url,
         "--context-validator", "noop",
     ]
+    if config is None:
+        # config padrão pro demo web: sensível e sem glow
+        default_cfg = Path(__file__).resolve().parents[3].parent / "config" / "web-demo.yaml"
+        if default_cfg.exists():
+            config = str(default_cfg)
+    if config:
+        cmd.extend(["--config", config])
     if source.startswith("file:"):
         cmd.append("--loop")
     if extra_args:
@@ -310,9 +318,10 @@ class _DetectorSupervisor:
     """Mantém o detector vivo: respawn automático quando ele sai
     (caso típico: arquivo de vídeo terminou)."""
 
-    def __init__(self, target_url: str, source: str) -> None:
+    def __init__(self, target_url: str, source: str, config: str | None = None) -> None:
         self._target_url = target_url
         self._source = source
+        self._config = config
         self._proc: subprocess.Popen | None = None
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._loop, daemon=True)
@@ -336,6 +345,7 @@ class _DetectorSupervisor:
             try:
                 self._proc = _spawn_detector(
                     target_url=self._target_url, source=self._source,
+                    config=self._config,
                 )
             except Exception as exc:
                 _log.warning("spawn falhou: %s; tentando novamente em %.1fs", exc, backoff)
@@ -357,6 +367,7 @@ def serve(
     *,
     spawn_detector: bool = True,
     detector_source: str = "webcam:0",
+    detector_config: str | None = None,
     detector_extra_args: list[str] | None = None,
 ) -> None:
     httpd = ThreadingHTTPServer((host, port), _Handler)
@@ -366,9 +377,12 @@ def serve(
 
     supervisor: _DetectorSupervisor | None = None
     if spawn_detector:
-        supervisor = _DetectorSupervisor(target_url=target_url, source=detector_source)
+        supervisor = _DetectorSupervisor(
+            target_url=target_url, source=detector_source, config=detector_config,
+        )
         supervisor.start()
-        print(f"Detector supervisor iniciado — fonte={detector_source}")
+        print(f"Detector supervisor iniciado — fonte={detector_source}"
+              + (f" config={detector_config}" if detector_config else ""))
     else:
         print("Detector NAO iniciado — rode 'driver-fatigue run --dashboard %s' em outro terminal" % target_url)
 

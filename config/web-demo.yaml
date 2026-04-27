@@ -1,0 +1,54 @@
+# Config pro modo `driver-fatigue web` — sensível e sem efeitos pesados.
+# Usa thresholds absolutos para feedback imediato durante demonstração.
+
+source:
+  kind: webcam
+  index: 0
+
+thresholds:
+  ear_threshold: 0.23
+  mar_threshold: 0.55
+  consecutive_frames: 8       # ~0.3s @ 30fps — alerta rápido pra demo
+  warning_ratio: 0.5
+  recovery_frames: 6
+  min_alert_duration_frames: 0
+  alarm_cooldown_seconds: 1.5
+  yawn_window_frames: 30
+  yawn_stability_max: 0.06
+
+calibration:
+  enabled: false              # demo: thresholds absolutos, sem warmup
+
+frame_quality:
+  enabled: true
+  min_face_confidence: 0.4
+  min_face_area_ratio: 0.02
+  max_head_yaw_deg: 45.0
+  max_head_pitch_deg: 35.0
+
+theme:
+  glow_enabled: false         # imagem natural, sem estouro
+  show_hud: true
+  show_face_oval: true
+  smoothing_steps: 8
+  overlay_alpha: 0.18
+
+alarm_sound_path: audio/alarm.wav
+
+sound_sink:
+  start_volume: 0.5
+  peak_volume: 0.9
+  ramp_seconds: 1.0
+  cooldown_seconds: 2.0
+
+headless: true
+sinks: [log]                  # http é injetado pelo --dashboard
+
+context_validator:
+  kind: noop
+
+dashboard_stream:
+  enabled: false              # ligado pelo --dashboard
+
+recording:
+  path: null
