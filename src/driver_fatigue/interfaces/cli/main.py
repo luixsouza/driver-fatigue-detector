@@ -87,6 +87,8 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="URL",
         help="URL do dashboard p/ enviar webhook+video (ex http://localhost:8000)",
     )
+    run.add_argument("--loop", action="store_true",
+                     help="loopa a fonte de vídeo (válido para --source file:...)")
     run.add_argument("--verbose", "-v", action="store_true")
     return parser
 
@@ -114,8 +116,11 @@ def main(argv: list[str] | None = None) -> int:
         else:
             settings = AppSettings()
 
+        source = args.source
+        if args.loop and source.kind == "file":
+            source = source.model_copy(update={"loop": True})
         updates: dict = {
-            "source": args.source,
+            "source": source,
             "headless": args.headless or settings.headless,
         }
         if args.sinks is not None:

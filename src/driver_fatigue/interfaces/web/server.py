@@ -287,6 +287,8 @@ def _spawn_detector(
         "--dashboard", target_url,
         "--context-validator", "noop",
     ]
+    if source.startswith("file:"):
+        cmd.append("--loop")
     if extra_args:
         cmd.extend(extra_args)
     _log.info("Subindo detector: %s", " ".join(cmd))
@@ -299,6 +301,51 @@ def _spawn_detector(
         stderr=subprocess.DEVNULL,
         creationflags=creationflags,
     )
+
+
+class _DetectorSupervisor:
+    """Mantém o detector vivo: respawn automático quando ele sai
+    (caso típico: arquivo de vídeo terminou)."""
+
+    def __init__(self, target_url: str, source: str) -> None:
+        self._target_url = target_url
+        self._source = source
+        self._proc: subprocess.Popen | None = None
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._proc and self._proc.poll() is None:
+            try:
+                self._proc.terminate()
+                self._proc.wait(timeout=3)
+            except Exception:
+                try: self._proc.kill()
+                except Exception: pass
+
+    def _loop(self) -> None:
+        backoff = 2.0
+        while not self._stop.is_set():
+            try:
+                self._proc = _spawn_detector(
+                    target_url=self._target_url, source=self._source,
+                )
+            except Exception as exc:
+                _log.warning("spawn falhou: %s; tentando novamente em %.1fs", exc, backoff)
+                if self._stop.wait(backoff): return
+                backoff = min(backoff * 1.5, 30.0)
+                continue
+            backoff = 2.0
+            rc = self._proc.wait()
+            if self._stop.is_set():
+                return
+            _log.info("detector saiu com rc=%s; respawn em 2s", rc)
+            if self._stop.wait(2.0):
+                return
 
 
 def serve(
@@ -314,17 +361,11 @@ def serve(
     target_url = f"http://{target_host}:{port}"
     print(f"Driver Fatigue dashboard rodando em {target_url}")
 
-    detector_proc: subprocess.Popen | None = None
+    supervisor: _DetectorSupervisor | None = None
     if spawn_detector:
-        try:
-            detector_proc = _spawn_detector(
-                target_url=target_url,
-                source=detector_source,
-                extra_args=detector_extra_args,
-            )
-            print(f"Detector iniciado (PID {detector_proc.pid}) — fonte={detector_source}")
-        except Exception as exc:
-            _log.warning("Falha ao subir detector automaticamente (%s); siga em modo manual", exc)
+        supervisor = _DetectorSupervisor(target_url=target_url, source=detector_source)
+        supervisor.start()
+        print(f"Detector supervisor iniciado — fonte={detector_source}")
     else:
         print("Detector NAO iniciado — rode 'driver-fatigue run --dashboard %s' em outro terminal" % target_url)
 
@@ -334,13 +375,8 @@ def serve(
         print("\nFinalizando...")
     finally:
         httpd.shutdown()
-        if detector_proc is not None and detector_proc.poll() is None:
-            try:
-                detector_proc.terminate()
-                detector_proc.wait(timeout=3)
-            except Exception:
-                try: detector_proc.kill()
-                except Exception: pass
+        if supervisor is not None:
+            supervisor.stop()
 
 
 def main(argv: list[str] | None = None) -> int:

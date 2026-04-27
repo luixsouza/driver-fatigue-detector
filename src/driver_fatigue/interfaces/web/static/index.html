@@ -598,19 +598,19 @@
     fetch("/api/health")
       .then(r => r.json())
       .then(h => {
-        if (h.video_age_seconds !== null && h.video_age_seconds < 5) {
+        if (h.video_age_seconds !== null && h.video_age_seconds < 30) {
           startVideo();
-        } else {
+        } else if (h.video_age_seconds === null) {
           videoStarted = false;
           video.removeAttribute("src");
           placeholder.style.display = "grid";
-          liveLabel.textContent = "offline";
+          liveLabel.textContent = "aguardando detector…";
         }
       })
       .catch(() => {});
   }
   pollVideo();
-  setInterval(pollVideo, 4000);
+  setInterval(pollVideo, 3000);
 
   function connect() {
     setConn(null, "conectando…");
