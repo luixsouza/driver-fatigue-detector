@@ -102,7 +102,17 @@ class RecordingSettings(BaseModel):
     codec: str = "mp4v"
 
 
-SinkName = Literal["sound", "log", "http", "mqtt"]
+class JsonlSinkSettings(BaseModel):
+    path: Path = Path("events.jsonl")
+
+
+class WebSettings(BaseModel):
+    host: str = "0.0.0.0"
+    port: int = 8000
+    api_key: str | None = None
+
+
+SinkName = Literal["sound", "log", "http", "mqtt", "jsonl"]
 
 
 class AppSettings(BaseSettings):
@@ -128,6 +138,8 @@ class AppSettings(BaseSettings):
     recording: RecordingSettings = Field(default_factory=RecordingSettings)
     context_validator: ContextValidatorSettings = Field(default_factory=ContextValidatorSettings)
     dashboard_stream: DashboardStreamSettings = Field(default_factory=DashboardStreamSettings)
+    jsonl: JsonlSinkSettings = Field(default_factory=JsonlSinkSettings)
+    web: WebSettings = Field(default_factory=WebSettings)
 
     @model_validator(mode="after")
     def _check_sink_configs(self) -> "AppSettings":

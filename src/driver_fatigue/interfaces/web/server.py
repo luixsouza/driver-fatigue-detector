@@ -41,6 +41,10 @@ _video_subscribers: list[queue.Queue] = []
 _last_jpeg: bytes | None = None
 _last_jpeg_at: float = 0.0
 
+_api_key: str | None = None
+_started_at: float = 0.0
+_last_event_at: float = 0.0
+
 
 def _push_jpeg(jpeg: bytes) -> None:
     global _last_jpeg, _last_jpeg_at
@@ -76,8 +80,9 @@ def _video_unsubscribe(q: queue.Queue) -> None:
 
 
 def _broadcast(event: dict[str, Any]) -> None:
-    global _last_event
+    global _last_event, _last_event_at
     _last_event = event
+    _last_event_at = time.monotonic()
     with _subscribers_lock:
         dead: list[queue.Queue] = []
         for q in _subscribers:
@@ -124,28 +129,53 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/api/video":
             self._serve_mjpeg()
             return
-        if path == "/api/health":
-            self._json(200, {
-                "ok": True,
+        if path == "/api/health" or path == "/health":
+            now = time.monotonic()
+            video_age = now - _last_jpeg_at if _last_jpeg is not None else None
+            event_age = now - _last_event_at if _last_event_at > 0 else None
+            uptime = now - _started_at if _started_at > 0 else None
+            stale_video = video_age is not None and video_age > 5.0
+            stale_events = event_age is not None and event_age > 10.0
+            no_signal = _last_jpeg is None and _last_event is None
+            ok = not (stale_video or stale_events or no_signal)
+            last_severity = None
+            if _last_event is not None:
+                last_severity = _last_event.get("severity")
+            self._json(200 if ok else 503, {
+                "ok": ok,
+                "uptime_seconds": uptime,
                 "subscribers": len(_subscribers),
                 "video_subscribers": len(_video_subscribers),
-                "video_age_seconds": (
-                    time.monotonic() - _last_jpeg_at if _last_jpeg is not None else None
-                ),
+                "video_age_seconds": video_age,
+                "event_age_seconds": event_age,
+                "last_severity": last_severity,
+                "auth_required": _api_key is not None,
             })
             return
         self.send_error(404, "not found")
+
+    def _require_auth(self) -> bool:
+        if _api_key is None:
+            return True
+        provided = self.headers.get("X-API-Key")
+        if provided == _api_key:
+            return True
+        self.send_error(401, "missing or invalid X-API-Key")
+        return False
 
     def do_POST(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0].split("#", 1)[0]
         self.path = path
         if self.path == "/api/events":
             length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0:
+            body = self.rfile.read(length) if length > 0 else b""
+            if not self._require_auth():
+                return
+            if not body:
                 self.send_error(400, "empty body")
                 return
             try:
-                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                payload = json.loads(body.decode("utf-8"))
             except json.JSONDecodeError as exc:
                 self.send_error(400, f"invalid json: {exc}")
                 return
@@ -155,10 +185,15 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/api/video/push":
             length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 5_000_000:
+            if length > 5_000_000:
                 self.send_error(400, "invalid jpeg size")
                 return
-            jpeg = self.rfile.read(length)
+            jpeg = self.rfile.read(length) if length > 0 else b""
+            if not self._require_auth():
+                return
+            if not jpeg:
+                self.send_error(400, "invalid jpeg size")
+                return
             _push_jpeg(jpeg)
             self._json(202, {"status": "accepted"})
             return
@@ -283,6 +318,7 @@ def _spawn_detector(
     source: str,
     config: str | None = None,
     extra_args: list[str] | None = None,
+    api_key: str | None = None,
 ) -> subprocess.Popen:
     cmd = [
         sys.executable, "-m", "driver_fatigue", "run",
@@ -306,11 +342,15 @@ def _spawn_detector(
     creationflags = 0
     if os.name == "nt":
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    env = os.environ.copy()
+    if api_key:
+        env["DRIVER_FATIGUE_WEB__API_KEY"] = api_key
     return subprocess.Popen(
         cmd,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         creationflags=creationflags,
+        env=env,
     )
 
 
@@ -318,10 +358,17 @@ class _DetectorSupervisor:
     """Mantém o detector vivo: respawn automático quando ele sai
     (caso típico: arquivo de vídeo terminou)."""
 
-    def __init__(self, target_url: str, source: str, config: str | None = None) -> None:
+    def __init__(
+        self,
+        target_url: str,
+        source: str,
+        config: str | None = None,
+        api_key: str | None = None,
+    ) -> None:
         self._target_url = target_url
         self._source = source
         self._config = config
+        self._api_key = api_key
         self._proc: subprocess.Popen | None = None
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._loop, daemon=True)
@@ -345,7 +392,7 @@ class _DetectorSupervisor:
             try:
                 self._proc = _spawn_detector(
                     target_url=self._target_url, source=self._source,
-                    config=self._config,
+                    config=self._config, api_key=self._api_key,
                 )
             except Exception as exc:
                 _log.warning("spawn falhou: %s; tentando novamente em %.1fs", exc, backoff)
@@ -369,16 +416,29 @@ def serve(
     detector_source: str = "webcam:0",
     detector_config: str | None = None,
     detector_extra_args: list[str] | None = None,
+    api_key: str | None = None,
 ) -> None:
+    global _api_key, _started_at
+    _api_key = api_key
+    _started_at = time.monotonic()
+    if api_key is None and host not in ("127.0.0.1", "::1", "localhost"):
+        _log.warning(
+            "Servindo em %s sem api_key — qualquer um na rede pode publicar eventos/vídeo. "
+            "Defina web.api_key em config/*.yaml ou DRIVER_FATIGUE_WEB__API_KEY.",
+            host,
+        )
     httpd = ThreadingHTTPServer((host, port), _Handler)
     target_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
     target_url = f"http://{target_host}:{port}"
     print(f"Driver Fatigue dashboard rodando em {target_url}")
+    if api_key:
+        print("Auth: X-API-Key obrigatorio em POST /api/events e /api/video/push")
 
     supervisor: _DetectorSupervisor | None = None
     if spawn_detector:
         supervisor = _DetectorSupervisor(
             target_url=target_url, source=detector_source, config=detector_config,
+            api_key=api_key,
         )
         supervisor.start()
         print(f"Detector supervisor iniciado — fonte={detector_source}"
@@ -404,17 +464,21 @@ def main(argv: list[str] | None = None) -> int:
                    help="fonte do detector embutido (webcam:N | file:path | rtsp://...)")
     p.add_argument("--no-detector", action="store_true",
                    help="nao sobe o detector automaticamente")
+    p.add_argument("--api-key", default=None,
+                   help="exige X-API-Key em POSTs sensíveis (ou DRIVER_FATIGUE_WEB__API_KEY)")
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    api_key = args.api_key or os.environ.get("DRIVER_FATIGUE_WEB__API_KEY")
     serve(
         host=args.host,
         port=args.port,
         spawn_detector=not args.no_detector,
         detector_source=args.source,
+        api_key=api_key,
     )
     return 0
 

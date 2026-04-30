@@ -73,3 +73,17 @@ recording:
   path: null
   fps: 30
   codec: mp4v
+
+# Persistência local de eventos (auditoria, evidência da POC).
+# Habilite incluindo "jsonl" em sinks (default acima é [sound, log]).
+jsonl:
+  path: events.jsonl
+
+# Servidor web (driver-fatigue web).
+# api_key: se definido, exige header X-API-Key em POST /api/events e
+# /api/video/push. Recomendado sempre que host != 127.0.0.1.
+# Pode ser sobrescrito por DRIVER_FATIGUE_WEB__API_KEY.
+web:
+  host: 0.0.0.0
+  port: 8000
+  api_key: null

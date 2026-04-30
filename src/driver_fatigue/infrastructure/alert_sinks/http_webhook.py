@@ -17,11 +17,14 @@ class HttpWebhookSink:
         url: str,
         bearer_token: str | None = None,
         timeout_seconds: float = 3.0,
+        api_key: str | None = None,
     ) -> None:
         self._url = url
         headers = {"Content-Type": "application/json"}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if api_key:
+            headers["X-API-Key"] = api_key
         self._client = httpx.Client(
             headers=headers,
             timeout=timeout_seconds,

@@ -8,3 +8,9 @@ build/
 dist/
 .venv/
 venv/
+
+# Workflow / scratch local — fora do produto
+.claude/
+docs/
+scripts/
+config/debug-*.yaml

@@ -19,6 +19,7 @@ from driver_fatigue.domain.value_objects import (
 )
 from driver_fatigue.infrastructure.alert_sinks.composite import CompositeSink
 from driver_fatigue.infrastructure.alert_sinks.http_webhook import HttpWebhookSink
+from driver_fatigue.infrastructure.alert_sinks.jsonl import JsonlEventSink
 from driver_fatigue.infrastructure.alert_sinks.log import LogSink
 from driver_fatigue.infrastructure.alert_sinks.mqtt import MqttSink
 from driver_fatigue.infrastructure.alert_sinks.sound import SoundSink
@@ -78,6 +79,7 @@ def _build_single_sink(
         return HttpWebhookSink(
             url=cfg.url, bearer_token=cfg.bearer_token,
             timeout_seconds=cfg.timeout_seconds,
+            api_key=settings.web.api_key,
         )
     if name == "mqtt":
         cfg = settings.mqtt
@@ -86,6 +88,8 @@ def _build_single_sink(
             broker=cfg.broker, port=cfg.port, topic=cfg.topic,
             username=cfg.username, password=cfg.password,
         )
+    if name == "jsonl":
+        return JsonlEventSink(path=settings.jsonl.path)
     raise ValueError(f"sink {name!r} desconhecido")
 
 
@@ -133,6 +137,7 @@ def _build_presenter(
             push_url=settings.dashboard_stream.push_url,
             jpeg_quality=settings.dashboard_stream.jpeg_quality,
             max_fps=settings.dashboard_stream.max_fps,
+            api_key=settings.web.api_key,
         ))
     if not extras:
         return main

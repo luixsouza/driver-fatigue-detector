@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -34,7 +35,7 @@ def _parse_source(arg: str) -> SourceSettings:
 
 
 def _parse_sinks(arg: str) -> list[str]:
-    valid = {"sound", "log", "http", "mqtt"}
+    valid = {"sound", "log", "http", "mqtt", "jsonl"}
     names = [n.strip() for n in arg.split(",") if n.strip()]
     for n in names:
         if n not in valid:
@@ -58,6 +59,10 @@ def _build_parser() -> argparse.ArgumentParser:
                      help="fonte do detector embutido (webcam:N | file:path | rtsp://...)")
     web.add_argument("--no-detector", action="store_true",
                      help="apenas o servidor; o detector deve ser rodado a parte")
+    web.add_argument("--api-key", default=None,
+                     help="exige X-API-Key em /api/events e /api/video/push")
+    web.add_argument("--config", type=Path, default=None,
+                     help="caminho para YAML (lê web.api_key, web.host, web.port)")
 
     run = sub.add_parser("run", help="inicia detecção")
     run.add_argument(
@@ -67,7 +72,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument(
         "--sinks", type=_parse_sinks, default=None,
-        help="sinks ativos (comma-separated): sound,log,http,mqtt",
+        help="sinks ativos (comma-separated): sound,log,http,mqtt,jsonl",
     )
     run.add_argument(
         "--record", type=Path, default=None,
@@ -103,10 +108,21 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "web":
         from driver_fatigue.interfaces.web.server import serve
+        web_settings = None
+        if args.config and args.config.exists():
+            web_settings = AppSettings.from_yaml(args.config).web
+        api_key = (
+            args.api_key
+            or (web_settings.api_key if web_settings else None)
+            or os.environ.get("DRIVER_FATIGUE_WEB__API_KEY")
+        )
+        host = args.host if args.host != "0.0.0.0" else (web_settings.host if web_settings else args.host)
+        port = args.port if args.port != 8000 else (web_settings.port if web_settings else args.port)
         serve(
-            host=args.host, port=args.port,
+            host=host, port=port,
             spawn_detector=not args.no_detector,
             detector_source=args.source,
+            api_key=api_key,
         )
         return 0
 

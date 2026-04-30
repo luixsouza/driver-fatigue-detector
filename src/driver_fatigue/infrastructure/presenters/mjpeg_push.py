@@ -36,12 +36,16 @@ class MjpegStreamPresenter:
         jpeg_quality: int = 70,
         max_fps: float = 15.0,
         timeout_seconds: float = 1.0,
+        api_key: str | None = None,
     ) -> None:
         self._renderer = renderer
         self._push_url = push_url
         self._jpeg_quality = max(1, min(100, jpeg_quality))
         self._min_interval = 1.0 / max(0.1, max_fps)
-        self._client = httpx.Client(timeout=timeout_seconds)
+        headers = {}
+        if api_key:
+            headers["X-API-Key"] = api_key
+        self._client = httpx.Client(timeout=timeout_seconds, headers=headers)
         self._last_send_at = 0.0
         self._stop_requested = False
         self._queue: queue.Queue[bytes] = queue.Queue(maxsize=2)
