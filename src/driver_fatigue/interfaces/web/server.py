@@ -4,8 +4,10 @@ Recebe eventos do detector via HTTP webhook (POST /api/events) e os
 distribui para todos os browsers conectados via Server-Sent Events
 (GET /api/stream). Serve a página HTML estática em /.
 
-Por padrão, sobe o detector como subprocess (apontado pra si mesmo)
-assim que liga — abrir o browser no dashboard já mostra a câmera.
+Por padrão, embute o detector na **mesma thread pool do servidor** (sem
+subprocess, sem HTTP loopback) — o caminho rápido. POST /api/events e
+/api/video/push continuam disponíveis pra cenários ubíquos onde um
+detector remoto publica pro dashboard de outra máquina.
 
 Stack mínimo da stdlib: nenhuma dep extra além do que ja temos no
 projeto. Usa http.server + threading + fila por cliente.
@@ -21,7 +23,6 @@ import json
 import logging
 import os
 import queue
-import subprocess
 import sys
 import threading
 import time
@@ -44,6 +45,42 @@ _last_jpeg_at: float = 0.0
 _api_key: str | None = None
 _started_at: float = 0.0
 _last_event_at: float = 0.0
+
+# Snapshot dos sliders simulados (BPM, volante, tempo, hora).
+# Acessado pelo POST /api/inputs (escrita), GET /api/inputs (leitura),
+# e pelo _InProcessFramePresenter (leitura a cada frame).
+_simulated_lock = threading.Lock()
+_simulated_inputs: dict[str, float] = {
+    "bpm": 75.0,
+    "steering_noise": 0.1,
+    "hours_driving": 0.0,
+    "hour_of_day": 12.0,
+}
+
+_INPUT_RANGES: dict[str, tuple[float, float]] = {
+    "bpm": (40.0, 120.0),
+    "steering_noise": (0.0, 1.0),
+    "hours_driving": (0.0, 10.0),
+    "hour_of_day": (0.0, 23.99),
+}
+
+
+def _get_simulated_snapshot() -> dict[str, float]:
+    with _simulated_lock:
+        return dict(_simulated_inputs)
+
+
+def _update_simulated(updates: dict) -> None:
+    with _simulated_lock:
+        for key, lo_hi in _INPUT_RANGES.items():
+            if key in updates:
+                val = updates[key]
+                try:
+                    val = float(val)
+                except (TypeError, ValueError):
+                    continue
+                lo, hi = lo_hi
+                _simulated_inputs[key] = max(lo, min(hi, val))
 
 
 def _push_jpeg(jpeg: bytes) -> None:
@@ -129,6 +166,9 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/api/video":
             self._serve_mjpeg()
             return
+        if path == "/api/inputs":
+            self._json(200, _get_simulated_snapshot())
+            return
         if path == "/api/health" or path == "/health":
             now = time.monotonic()
             video_age = now - _last_jpeg_at if _last_jpeg is not None else None
@@ -197,6 +237,25 @@ class _Handler(BaseHTTPRequestHandler):
             _push_jpeg(jpeg)
             self._json(202, {"status": "accepted"})
             return
+        if self.path == "/api/inputs":
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length) if length > 0 else b""
+            if not self._require_auth():
+                return
+            if not body:
+                self.send_error(400, "empty body")
+                return
+            try:
+                payload = json.loads(body.decode("utf-8"))
+            except json.JSONDecodeError as exc:
+                self.send_error(400, f"invalid json: {exc}")
+                return
+            if not isinstance(payload, dict):
+                self.send_error(400, "expected json object")
+                return
+            _update_simulated(payload)
+            self._json(202, {"status": "accepted"})
+            return
         self.send_error(404, "not found")
 
     def _serve_static(self, name: str, mime: str) -> None:
@@ -258,10 +317,10 @@ class _Handler(BaseHTTPRequestHandler):
                     try:
                         self.wfile.write(b": ping\n\n")
                         self.wfile.flush()
-                    except (BrokenPipeError, ConnectionResetError):
+                    except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                         return
                     last_ping = time.monotonic()
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             return
         finally:
             _unsubscribe(q)
@@ -284,7 +343,7 @@ class _Handler(BaseHTTPRequestHandler):
                 except queue.Empty:
                     continue
                 self._mjpeg_send(boundary, jpeg)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             return
         finally:
             _video_unsubscribe(q)
@@ -300,7 +359,7 @@ class _Handler(BaseHTTPRequestHandler):
             self.wfile.write(jpeg)
             self.wfile.write(b"\r\n")
             self.wfile.flush()
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             raise
 
     def _sse_send(self, event: dict) -> None:
@@ -308,69 +367,116 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             self.wfile.write(line)
             self.wfile.flush()
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             raise
 
 
-def _spawn_detector(
-    *,
-    target_url: str,
-    source: str,
-    config: str | None = None,
-    extra_args: list[str] | None = None,
-    api_key: str | None = None,
-) -> subprocess.Popen:
-    cmd = [
-        sys.executable, "-m", "driver_fatigue", "run",
-        "--source", source,
-        "--headless",
-        "--dashboard", target_url,
-        "--context-validator", "noop",
-    ]
-    if config is None:
-        # config padrão pro demo web: sensível e sem glow
-        default_cfg = Path(__file__).resolve().parents[3].parent / "config" / "web-demo.yaml"
-        if default_cfg.exists():
-            config = str(default_cfg)
-    if config:
-        cmd.extend(["--config", config])
-    if source.startswith("file:"):
-        cmd.append("--loop")
-    if extra_args:
-        cmd.extend(extra_args)
-    _log.info("Subindo detector: %s", " ".join(cmd))
-    creationflags = 0
-    if os.name == "nt":
-        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    env = os.environ.copy()
-    if api_key:
-        env["DRIVER_FATIGUE_WEB__API_KEY"] = api_key
-    return subprocess.Popen(
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=creationflags,
-        env=env,
-    )
+class _QuietThreadingHTTPServer(ThreadingHTTPServer):
+    """Suprime tracebacks ruidosas quando o cliente desconecta no meio
+    de um stream MJPEG/SSE — comportamento normal de browser, nao bug."""
+
+    def handle_error(self, request, client_address):  # noqa: ARG002
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)):
+            return
+        super().handle_error(request, client_address)
 
 
-class _DetectorSupervisor:
-    """Mantém o detector vivo: respawn automático quando ele sai
-    (caso típico: arquivo de vídeo terminou)."""
+class _InProcessAlertSink:
+    """Sink in-memory que despeja eventos direto nas subscriptions do SSE.
+
+    Substitui o HttpWebhookSink quando o detector roda no mesmo processo do
+    web server — economiza JSON encode/decode + round-trip HTTP loopback."""
+
+    def notify(self, event) -> None:
+        _broadcast({
+            "event": "fatigue_alert",
+            "timestamp": event.timestamp,
+            "frame_index": event.frame_index,
+            "ear": event.state.ear,
+            "mar": event.state.mar,
+            "severity": event.state.severity,
+            "consecutive_frames": event.state.consecutive_frames,
+        })
+
+    def on_recovery(self, frame_index: int) -> None:
+        _broadcast({
+            "event": "fatigue_recovery",
+            "timestamp": 0.0,
+            "frame_index": frame_index,
+        })
+
+    def publish_state(self, frame, state) -> None:
+        baseline = state.baseline
+        _broadcast({
+            "event": "state",
+            "timestamp": frame.timestamp,
+            "frame_index": frame.index,
+            "ear": state.ear,
+            "mar": state.mar,
+            "severity": state.severity,
+            "consecutive_frames": state.consecutive_frames,
+            "calibrating": (
+                baseline.sample_count > 0 and baseline.sample_count < 30
+            ),
+            "calibration_progress": min(1.0, baseline.sample_count / 45.0),
+            "quality_ok": state.quality.trustworthy,
+            "quality_reason": state.quality.reason,
+        })
+
+
+class _InProcessFramePresenter:
+    """Presenter in-memory: renderiza overlay + encoda JPEG e publica no
+    buffer do MJPEG sem POST de loopback. Throttled por max_fps."""
+
+    def __init__(self, renderer, *, max_fps: float = 30.0, jpeg_quality: int = 88) -> None:
+        import cv2  # local pra reduzir import cost de quem só usa SSE
+        self._cv2 = cv2
+        self._renderer = renderer
+        self._jpeg_quality = max(1, min(100, jpeg_quality))
+        self._min_interval = 1.0 / max(0.1, max_fps)
+        self._last_send_at = 0.0
+        self._stop_requested = False
+
+    def present(self, frame, faces, state) -> None:
+        now = time.monotonic()
+        if now - self._last_send_at < self._min_interval:
+            return
+        self._last_send_at = now
+        rendered = self._renderer.render(frame, faces, state)
+        ok, buf = self._cv2.imencode(
+            ".jpg", rendered,
+            [int(self._cv2.IMWRITE_JPEG_QUALITY), self._jpeg_quality],
+        )
+        if ok:
+            _push_jpeg(bytes(buf))
+
+    def should_stop(self) -> bool:
+        return self._stop_requested
+
+    def request_stop(self) -> None:
+        self._stop_requested = True
+
+    def close(self) -> None:
+        self._stop_requested = True
+
+
+class _EmbeddedDetectorRunner:
+    """Roda o use case do detector numa daemon thread do mesmo processo.
+
+    Respawn automático se o use case sair (arquivo de vídeo terminou,
+    câmera caiu, etc.) — backoff exponencial até 30s."""
 
     def __init__(
         self,
-        target_url: str,
+        *,
         source: str,
-        config: str | None = None,
-        api_key: str | None = None,
+        config_path: Path | None,
     ) -> None:
-        self._target_url = target_url
         self._source = source
-        self._config = config
-        self._api_key = api_key
-        self._proc: subprocess.Popen | None = None
+        self._config_path = config_path
         self._stop = threading.Event()
+        self._presenter: _InProcessFramePresenter | None = None
         self._thread = threading.Thread(target=self._loop, daemon=True)
 
     def start(self) -> None:
@@ -378,34 +484,74 @@ class _DetectorSupervisor:
 
     def stop(self) -> None:
         self._stop.set()
-        if self._proc and self._proc.poll() is None:
-            try:
-                self._proc.terminate()
-                self._proc.wait(timeout=3)
-            except Exception:
-                try: self._proc.kill()
-                except Exception: pass
+        if self._presenter is not None:
+            self._presenter.request_stop()
+
+    def _build_settings(self):
+        from driver_fatigue.interfaces.config.settings import (
+            AppSettings, SourceSettings,
+        )
+        cfg = self._config_path
+        if cfg is None:
+            default_cfg = Path(__file__).resolve().parents[3].parent / "config" / "web-demo.yaml"
+            if default_cfg.exists():
+                cfg = default_cfg
+        settings = (
+            AppSettings.from_yaml(cfg) if cfg and cfg.exists() else AppSettings()
+        )
+        source = _parse_source_str(self._source)
+        if source.kind == "file":
+            source = source.model_copy(update={"loop": True})
+        return settings.model_copy(update={
+            "source": source,
+            "headless": True,
+            # Sinks reais ficam vazios — o InProcessAlertSink injetado já cobre
+            # o dashboard, e som/MQTT/JSONL não fazem sentido pro web-embed.
+            "sinks": [],
+        })
+
+    def _run_once(self) -> None:
+        from driver_fatigue.bootstrap import build_monitor_use_case, _build_renderer
+        settings = self._build_settings()
+        renderer = _build_renderer(settings)
+        self._presenter = _InProcessFramePresenter(
+            renderer,
+            max_fps=settings.dashboard_stream.max_fps,
+            jpeg_quality=settings.dashboard_stream.jpeg_quality,
+        )
+        sink = _InProcessAlertSink()
+        uc = build_monitor_use_case(
+            settings=settings,
+            sink_override=sink,
+            presenter_override=self._presenter,
+        )
+        uc.run()
 
     def _loop(self) -> None:
         backoff = 2.0
         while not self._stop.is_set():
             try:
-                self._proc = _spawn_detector(
-                    target_url=self._target_url, source=self._source,
-                    config=self._config, api_key=self._api_key,
-                )
+                self._run_once()
             except Exception as exc:
-                _log.warning("spawn falhou: %s; tentando novamente em %.1fs", exc, backoff)
-                if self._stop.wait(backoff): return
+                _log.warning(
+                    "detector embutido caiu: %s; respawn em %.1fs", exc, backoff,
+                )
+                if self._stop.wait(backoff):
+                    return
                 backoff = min(backoff * 1.5, 30.0)
                 continue
             backoff = 2.0
-            rc = self._proc.wait()
             if self._stop.is_set():
                 return
-            _log.info("detector saiu com rc=%s; respawn em 2s", rc)
+            _log.info("detector embutido finalizou; respawn em 2s")
             if self._stop.wait(2.0):
                 return
+
+
+def _parse_source_str(arg: str):
+    """Reaproveita o parsing do CLI para 'webcam:N' | 'file:path' | 'rtsp://...'."""
+    from driver_fatigue.interfaces.cli.main import _parse_source
+    return _parse_source(arg)
 
 
 def serve(
@@ -415,7 +561,7 @@ def serve(
     spawn_detector: bool = True,
     detector_source: str = "webcam:0",
     detector_config: str | None = None,
-    detector_extra_args: list[str] | None = None,
+    detector_extra_args: list[str] | None = None,  # noqa: ARG001 (compat)
     api_key: str | None = None,
 ) -> None:
     global _api_key, _started_at
@@ -427,21 +573,22 @@ def serve(
             "Defina web.api_key em config/*.yaml ou DRIVER_FATIGUE_WEB__API_KEY.",
             host,
         )
-    httpd = ThreadingHTTPServer((host, port), _Handler)
+    httpd = _QuietThreadingHTTPServer((host, port), _Handler)
     target_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
     target_url = f"http://{target_host}:{port}"
     print(f"Driver Fatigue dashboard rodando em {target_url}")
     if api_key:
         print("Auth: X-API-Key obrigatorio em POST /api/events e /api/video/push")
 
-    supervisor: _DetectorSupervisor | None = None
+    runner: _EmbeddedDetectorRunner | None = None
     if spawn_detector:
-        supervisor = _DetectorSupervisor(
-            target_url=target_url, source=detector_source, config=detector_config,
-            api_key=api_key,
+        cfg_path = Path(detector_config) if detector_config else None
+        runner = _EmbeddedDetectorRunner(
+            source=detector_source,
+            config_path=cfg_path,
         )
-        supervisor.start()
-        print(f"Detector supervisor iniciado — fonte={detector_source}"
+        runner.start()
+        print(f"Detector embutido (in-process) iniciado — fonte={detector_source}"
               + (f" config={detector_config}" if detector_config else ""))
     else:
         print("Detector NAO iniciado — rode 'driver-fatigue run --dashboard %s' em outro terminal" % target_url)
@@ -452,8 +599,8 @@ def serve(
         print("\nFinalizando...")
     finally:
         httpd.shutdown()
-        if supervisor is not None:
-            supervisor.stop()
+        if runner is not None:
+            runner.stop()
 
 
 def main(argv: list[str] | None = None) -> int:
