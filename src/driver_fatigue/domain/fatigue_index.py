@@ -1,14 +1,10 @@
-"""Motor de fusao multimodal — contratos de dominio.
+"""Motor de fusao multimodal — logica de dominio.
 
-Define os value objects de entrada/saida do indice de fadiga e o Protocol
-que implementacoes concretas (fuzzy, ml, regras simples) precisam seguir.
-
-A curva circadiana fica aqui porque e logica de dominio pura, sem deps.
+Por enquanto so contem a curva circadiana usada como entrada do motor
+de fusao. Value objects e Protocol do evaluator entram em commits
+subsequentes.
 """
 from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Protocol
 
 
 def circadian_risk(hour_of_day: float) -> float:
