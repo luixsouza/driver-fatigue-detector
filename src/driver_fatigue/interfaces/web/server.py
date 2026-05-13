@@ -464,7 +464,12 @@ class _InProcessAlertSink:
     Substitui o HttpWebhookSink quando o detector roda no mesmo processo do
     web server — economiza JSON encode/decode + round-trip HTTP loopback."""
 
+    def __init__(self, evaluator=None) -> None:
+        from driver_fatigue.infrastructure.fatigue_inference.noop import NoOpIndexEvaluator
+        self._evaluator = evaluator or NoOpIndexEvaluator()
+
     def notify(self, event) -> None:
+        # mantem evento simples; sink externo nao recebe fatigue_index
         _broadcast({
             "event": "fatigue_alert",
             "timestamp": event.timestamp,
@@ -483,7 +488,23 @@ class _InProcessAlertSink:
         })
 
     def publish_state(self, frame, state) -> None:
+        from driver_fatigue.domain.fatigue_index import FatigueInputs
         baseline = state.baseline
+        sim = _get_simulated_snapshot()
+        # normalizacoes
+        ear_rest = max(baseline.ear_rest, 0.05) if baseline.sample_count > 0 else 0.30
+        mar_std = max(baseline.mar_std, 0.04) if baseline.sample_count > 0 else 0.04
+        mar_rest = baseline.mar_rest if baseline.sample_count > 0 else 0.20
+        ear_norm = max(0.0, min(1.0, state.ear / ear_rest))
+        mar_norm = max(0.0, min(1.0, (state.mar - mar_rest) / (mar_std * 3 + 1e-6)))
+        inputs = FatigueInputs(
+            ear_norm=ear_norm, mar_norm=mar_norm,
+            head_drop_frames=state.head_drop_frames,
+            consecutive_eyes_closed=state.consecutive_frames,
+            bpm=sim["bpm"], steering_noise=sim["steering_noise"],
+            hours_driving=sim["hours_driving"], hour_of_day=sim["hour_of_day"],
+        )
+        idx = self._evaluator.compute(inputs)
         _broadcast({
             "event": "state",
             "timestamp": frame.timestamp,
@@ -498,6 +519,11 @@ class _InProcessAlertSink:
             "calibration_progress": min(1.0, baseline.sample_count / 45.0),
             "quality_ok": state.quality.trustworthy,
             "quality_reason": state.quality.reason,
+            "fatigue_index": idx.value,
+            "index_severity": idx.severity,
+            "explain": idx.explain,
+            "top_contributors": list(idx.top_contributors),
+            "critical": idx.critical,
         })
 
 
@@ -587,7 +613,7 @@ class _EmbeddedDetectorRunner:
         })
 
     def _run_once(self) -> None:
-        from driver_fatigue.bootstrap import build_monitor_use_case, _build_renderer
+        from driver_fatigue.bootstrap import build_monitor_use_case, _build_renderer, _build_index_evaluator
         settings = self._build_settings()
         renderer = _build_renderer(settings)
         self._presenter = _InProcessFramePresenter(
@@ -595,7 +621,8 @@ class _EmbeddedDetectorRunner:
             max_fps=settings.dashboard_stream.max_fps,
             jpeg_quality=settings.dashboard_stream.jpeg_quality,
         )
-        sink = _InProcessAlertSink()
+        evaluator = _build_index_evaluator(settings)
+        sink = _InProcessAlertSink(evaluator=evaluator)
         uc = build_monitor_use_case(
             settings=settings,
             sink_override=sink,
