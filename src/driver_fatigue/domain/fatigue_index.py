@@ -1,10 +1,13 @@
 """Motor de fusao multimodal — logica de dominio.
 
-Por enquanto so contem a curva circadiana usada como entrada do motor
-de fusao. Value objects e Protocol do evaluator entram em commits
-subsequentes.
+Define os value objects de entrada/saida do indice de fadiga, o Protocol
+do evaluator que implementacoes concretas devem satisfazer, e a curva
+circadiana usada como insumo do motor.
 """
 from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Protocol
 
 
 def circadian_risk(hour_of_day: float) -> float:
@@ -41,3 +44,38 @@ def circadian_risk(hour_of_day: float) -> float:
     night = _bump(2.0, 6.0, 0.9)
     afternoon = _bump(14.0, 16.0, 0.6)
     return max(night, afternoon)
+
+
+@dataclass(frozen=True, slots=True)
+class FatigueInputs:
+    """Snapshot consumido pelo motor de fusao a cada frame.
+
+    Campos normalizados pra 0-1 quando possivel pra desacoplar do
+    baseline de cada usuario. Sinais simulados sao clampados antes de
+    chegar aqui (responsabilidade do endpoint /api/inputs).
+    """
+    ear_norm: float
+    mar_norm: float
+    head_drop_frames: int
+    consecutive_eyes_closed: int
+    bpm: float
+    steering_noise: float
+    hours_driving: float
+    hour_of_day: float
+
+
+@dataclass(frozen=True, slots=True)
+class FatigueIndex:
+    value: float
+    severity: str
+    top_contributors: tuple[str, ...]
+    explain: str
+    critical: bool = False
+
+    @classmethod
+    def empty(cls) -> "FatigueIndex":
+        return cls(value=0.0, severity="normal", top_contributors=(), explain="")
+
+
+class IndexEvaluator(Protocol):
+    def compute(self, inputs: FatigueInputs) -> FatigueIndex: ...
