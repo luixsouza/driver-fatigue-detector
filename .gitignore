@@ -6,6 +6,8 @@ htmlcov/
 *.egg-info/
 build/
 dist/
+web/node_modules/
+web/dist/
 .venv/
 venv/
 

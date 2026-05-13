@@ -30,6 +30,11 @@ dev = [
 ai-local = [
     "onnxruntime>=1.17",
 ]
+fuzzy = [
+    "scikit-fuzzy>=0.4.2",
+    "scipy>=1.10",
+    "networkx>=3.0",
+]
 
 [project.scripts]
 driver-fatigue = "driver_fatigue.interfaces.cli.main:main"
