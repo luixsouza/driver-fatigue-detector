@@ -194,11 +194,35 @@ def _build_validator(settings: AppSettings) -> ContextValidatorPort | None:
     return NoopContextValidator()
 
 
+def _build_index_evaluator(settings: AppSettings):
+    """Constroi o motor de fusao multimodal.
+
+    Retorna NoOp se desabilitado ou se scikit-fuzzy nao estiver instalado.
+    """
+    from driver_fatigue.infrastructure.fatigue_inference.noop import NoOpIndexEvaluator
+
+    if not settings.fatigue_index.enabled:
+        return NoOpIndexEvaluator()
+    try:
+        from driver_fatigue.infrastructure.fatigue_inference.fuzzy import (
+            FuzzyIndexEvaluator,
+        )
+        return FuzzyIndexEvaluator()
+    except ImportError:
+        _log.warning(
+            "scikit-fuzzy nao instalado; rodando sem indice de fadiga. "
+            "Instale com: pip install -e \".[fuzzy]\""
+        )
+        return NoOpIndexEvaluator()
+
+
 def build_monitor_use_case(
     settings: AppSettings,
     source_override: VideoSourcePort | None = None,
     sound_override: Literal["disabled"] | None = None,
     validator_override: ContextValidatorPort | None = None,
+    sink_override: AlertSinkPort | None = None,
+    presenter_override: FramePresenterPort | None = None,
 ) -> MonitorDriverUseCase:
     source = source_override if source_override is not None else _build_source(settings)
     detector = MediapipeFaceDetector()
@@ -212,6 +236,8 @@ def build_monitor_use_case(
         alarm_cooldown_seconds=settings.thresholds.alarm_cooldown_seconds,
         yawn_window_frames=settings.thresholds.yawn_window_frames,
         yawn_stability_max=settings.thresholds.yawn_stability_max,
+        head_drop_pitch_deg=settings.thresholds.head_drop_pitch_deg,
+        head_drop_frames_threshold=settings.thresholds.head_drop_frames_threshold,
     )
     calibration = _build_calibration(settings)
     quality_policy = _build_quality_policy(settings)
@@ -221,9 +247,12 @@ def build_monitor_use_case(
         calibration=calibration,
         quality_policy=quality_policy,
     )
-    sink = _build_sinks(settings, sound_override=sound_override)
-    renderer = _build_renderer(settings)
-    presenter = _build_presenter(settings, renderer)
+    sink = sink_override if sink_override is not None else _build_sinks(settings, sound_override=sound_override)
+    if presenter_override is not None:
+        presenter = presenter_override
+    else:
+        renderer = _build_renderer(settings)
+        presenter = _build_presenter(settings, renderer)
     validator = validator_override if validator_override is not None else _build_validator(settings)
     state_publisher = _resolve_state_publisher(sink)
     return MonitorDriverUseCase(
