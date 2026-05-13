@@ -17,7 +17,7 @@ def circadian_risk(hour_of_day: float) -> float:
     - 02:00-06:00: 0.9 (vale circadiano noturno)
     - 14:00-16:00: 0.6 (vale pos-prandial)
     - resto:       0.1
-    - transicoes lineares de 30min nas bordas
+    - transicoes lineares de 1h nas bordas
 
     Args:
         hour_of_day: 0.0-23.99 (clampado se fora)
