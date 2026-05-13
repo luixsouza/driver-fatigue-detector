@@ -36,10 +36,11 @@ _RULE_LABELS: dict[str, str] = {
 
 class FuzzyIndexEvaluator:
     def __init__(self) -> None:
+        # eyes_closed = 1 - ear_norm: 0.0 = olhos abertos, 1.0 = olhos fechados
         eyes = ctrl.Antecedent(np.linspace(0, 1, 100), "eyes_closed")
-        eyes["aberto"]  = fuzz.trapmf(eyes.universe, [0.7, 0.85, 1.0, 1.0])
-        eyes["parcial"] = fuzz.trimf(eyes.universe, [0.3, 0.5, 0.7])
-        eyes["fechado"] = fuzz.trapmf(eyes.universe, [0.0, 0.0, 0.2, 0.35])
+        eyes["aberto"]  = fuzz.trapmf(eyes.universe, [0.0, 0.0, 0.15, 0.30])
+        eyes["parcial"] = fuzz.trimf(eyes.universe, [0.25, 0.45, 0.65])
+        eyes["fechado"] = fuzz.trapmf(eyes.universe, [0.55, 0.72, 1.0, 1.0])
 
         mouth = ctrl.Antecedent(np.linspace(0, 1, 100), "mouth")
         mouth["fechada"] = fuzz.trapmf(mouth.universe, [0.0, 0.0, 0.15, 0.30])
@@ -72,10 +73,10 @@ class FuzzyIndexEvaluator:
         circ["vale"]   = fuzz.trapmf(circ.universe, [0.60, 0.80, 1.0, 1.0])
 
         idx = ctrl.Consequent(np.arange(0, 101, 1), "idx")
-        idx["normal"]  = fuzz.trapmf(idx.universe, [0,  0,  20, 35])
-        idx["atencao"] = fuzz.trimf(idx.universe, [25, 45, 65])
+        idx["normal"]  = fuzz.trapmf(idx.universe, [0,   0,  2,  5])
+        idx["atencao"] = fuzz.trimf(idx.universe, [35, 52, 70])
         idx["alerta"]  = fuzz.trimf(idx.universe, [55, 70, 85])
-        idx["critico"] = fuzz.trapmf(idx.universe, [75, 90, 100, 100])
+        idx["critico"] = fuzz.trapmf(idx.universe, [45, 60, 100, 100])
 
         rules = [
             ctrl.Rule(eyes["fechado"] & head["leve"],                idx["alerta"],  label="R1"),
@@ -123,22 +124,51 @@ class FuzzyIndexEvaluator:
             severity = "alert"
         critical = value >= 80
 
-        top, explain = self._top_contributors(sim)
+        top, explain = self._top_contributors(sim, inp, value)
         return FatigueIndex(
             value=value, severity=severity,
             top_contributors=top, explain=explain, critical=critical,
         )
 
-    def _top_contributors(self, sim) -> tuple[tuple[str, ...], str]:
-        try:
-            scored: list[tuple[str, float]] = []
-            for rule in self._system.rules:
-                label = getattr(rule, "label", None) or rule.consequent[0].label
-                strength = float(getattr(rule, "_aggregate_firing", [0.0])[0]) if hasattr(rule, "_aggregate_firing") else 0.0
-                scored.append((label, strength))
-            scored.sort(key=lambda x: x[1], reverse=True)
-            top_labels = tuple(lbl for lbl, s in scored[:2] if s > 0.05)
-            human = [_RULE_LABELS.get(lbl, lbl) for lbl in top_labels]
-            return top_labels, " + ".join(human) if human else ""
-        except Exception:
+    def _top_contributors(self, sim, inp: "FatigueInputs", value: float) -> tuple[tuple[str, ...], str]:
+        """Top regras ativadas. scikit-fuzzy 0.5.0 nao expoe _aggregate_firing
+        consistentemente, entao caimos numa heuristica baseada nos inputs:
+        qual antecedente esta mais 'ruim' (longe do baseline saudavel)."""
+        if value < 35:
             return (), ""
+
+        # Heuristica: ranking de inputs por "gravidade" pra essa pessoa
+        scores: list[tuple[str, float]] = []
+        # eyes_closed: quanto menor ear_norm, pior
+        eyes_bad = max(0.0, 1.0 - inp.ear_norm)
+        if eyes_bad > 0.4:
+            scores.append(("R1" if inp.head_drop_frames > 10 else "R4", eyes_bad))
+        # mouth: quanto maior mar_norm (>0.5), mais perto de bocejo
+        if inp.mar_norm > 0.5:
+            scores.append(("R2" if eyes_bad > 0.5 else "R3", inp.mar_norm))
+        # head_drop: pesado domina
+        if inp.head_drop_frames >= 35:
+            scores.append(("R10", inp.head_drop_frames / 60.0))
+        elif inp.head_drop_frames >= 8:
+            scores.append(("R1", inp.head_drop_frames / 60.0))
+        # bpm: baixo
+        if inp.bpm < 60:
+            scores.append(("R4" if eyes_bad > 0.3 else "R5", (60 - inp.bpm) / 20))
+        # tempo: longo
+        if inp.hours_driving > 5:
+            scores.append(("R8" if circadian_risk(inp.hour_of_day) > 0.5 else "R3", inp.hours_driving / 10))
+        # steering
+        if inp.steering_noise > 0.5:
+            scores.append(("R6", inp.steering_noise))
+
+        # dedup mantendo a maior pontuacao por label
+        by_label: dict[str, float] = {}
+        for label, s in scores:
+            by_label[label] = max(by_label.get(label, 0.0), s)
+        ordered = sorted(by_label.items(), key=lambda x: x[1], reverse=True)
+        top_labels = tuple(lbl for lbl, _ in ordered[:2])
+        if not top_labels:
+            # Index alto mas nada cruzou os thresholds — fallback generico
+            return ("R11",), "padrao multivariado"
+        human = [_RULE_LABELS.get(lbl, lbl) for lbl in top_labels]
+        return top_labels, " + ".join(human)
