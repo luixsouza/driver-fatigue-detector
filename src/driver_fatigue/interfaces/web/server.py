@@ -83,6 +83,59 @@ def _update_simulated(updates: dict) -> None:
                 _simulated_inputs[key] = max(lo, min(hi, val))
 
 
+# Cenario scriptado pra demonstracao. Anda em 10Hz interpolando entre
+# checkpoints. Singleton: so um demo roda por vez (segunda chamada → 409).
+_demo_runner_lock = threading.Lock()
+_demo_runner: "_DemoScenarioRunner | None" = None
+
+
+_DEMO_TIMELINE: list[tuple[float, dict[str, float]]] = [
+    (0.0,  {"bpm": 75, "steering_noise": 0.10, "hours_driving": 5.0, "hour_of_day": 15.0}),
+    (5.0,  {"bpm": 70, "steering_noise": 0.15, "hours_driving": 5.5, "hour_of_day": 15.0}),
+    (10.0, {"bpm": 62, "steering_noise": 0.30, "hours_driving": 6.0, "hour_of_day": 15.0}),
+    (15.0, {"bpm": 55, "steering_noise": 0.50, "hours_driving": 6.5, "hour_of_day": 15.0}),
+    (20.0, {"bpm": 50, "steering_noise": 0.65, "hours_driving": 7.0, "hour_of_day": 3.5}),
+    (25.0, {"bpm": 48, "steering_noise": 0.75, "hours_driving": 7.5, "hour_of_day": 3.5}),
+    (30.0, {"bpm": 48, "steering_noise": 0.75, "hours_driving": 7.5, "hour_of_day": 3.5}),
+]
+
+
+class _DemoScenarioRunner:
+    def __init__(self) -> None:
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+
+    def _loop(self) -> None:
+        start = time.monotonic()
+        step = 0.1  # 10Hz
+        while not self._stop.is_set():
+            elapsed = time.monotonic() - start
+            if elapsed >= _DEMO_TIMELINE[-1][0]:
+                _update_simulated(_DEMO_TIMELINE[-1][1])
+                break
+            snapshot = self._interpolate(elapsed)
+            _update_simulated(snapshot)
+            if self._stop.wait(step):
+                return
+
+    @staticmethod
+    def _interpolate(t: float) -> dict[str, float]:
+        # encontra o segmento [t_i, t_{i+1}] que contem t
+        for i in range(len(_DEMO_TIMELINE) - 1):
+            t0, p0 = _DEMO_TIMELINE[i]
+            t1, p1 = _DEMO_TIMELINE[i + 1]
+            if t0 <= t < t1:
+                frac = (t - t0) / (t1 - t0)
+                return {k: p0[k] + (p1[k] - p0[k]) * frac for k in p0}
+        return dict(_DEMO_TIMELINE[-1][1])
+
+
 def _push_jpeg(jpeg: bytes) -> None:
     global _last_jpeg, _last_jpeg_at
     _last_jpeg = jpeg
@@ -204,6 +257,7 @@ class _Handler(BaseHTTPRequestHandler):
         return False
 
     def do_POST(self) -> None:  # noqa: N802
+        global _demo_runner
         path = self.path.split("?", 1)[0].split("#", 1)[0]
         self.path = path
         if self.path == "/api/events":
@@ -255,6 +309,28 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             _update_simulated(payload)
             self._json(202, {"status": "accepted"})
+            return
+        if self.path == "/api/demo/start":
+            if not self._require_auth():
+                return
+            with _demo_runner_lock:
+                if _demo_runner is not None and _demo_runner._thread.is_alive():
+                    self._json(409, {"error": "demo already running"})
+                    return
+                _demo_runner = _DemoScenarioRunner()
+                _demo_runner.start()
+            self._json(202, {"status": "started", "duration_seconds": _DEMO_TIMELINE[-1][0]})
+            return
+        if self.path == "/api/demo/stop":
+            if not self._require_auth():
+                return
+            with _demo_runner_lock:
+                if _demo_runner is None or not _demo_runner._thread.is_alive():
+                    self._json(200, {"status": "not_running"})
+                    return
+                _demo_runner.stop()
+                _demo_runner = None
+            self._json(202, {"status": "stopped"})
             return
         self.send_error(404, "not found")
 
