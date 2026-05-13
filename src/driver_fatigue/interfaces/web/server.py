@@ -208,6 +208,17 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/" or path == "/index.html":
             self._serve_static("index.html", "text/html; charset=utf-8")
             return
+        if path.startswith("/assets/"):
+            name = path[1:]  # strip leading slash → "assets/index-XXXX.js"
+            mime = self._guess_mime(name)
+            self._serve_static(name, mime)
+            return
+        if path.endswith(".svg") or path.endswith(".png") or path.endswith(".ico"):
+            # arquivos da raiz do public/ (ifg-logo.svg, favicons, etc.)
+            name = path.lstrip("/")
+            mime = self._guess_mime(name)
+            self._serve_static(name, mime)
+            return
         if path.startswith("/static/"):
             name = path[len("/static/") :]
             mime = self._guess_mime(name)
@@ -355,12 +366,20 @@ class _Handler(BaseHTTPRequestHandler):
     def _guess_mime(self, name: str) -> str:
         if name.endswith(".html"):
             return "text/html; charset=utf-8"
-        if name.endswith(".js"):
+        if name.endswith(".js") or name.endswith(".mjs"):
             return "application/javascript; charset=utf-8"
         if name.endswith(".css"):
             return "text/css; charset=utf-8"
         if name.endswith(".json"):
             return "application/json"
+        if name.endswith(".svg"):
+            return "image/svg+xml"
+        if name.endswith(".png"):
+            return "image/png"
+        if name.endswith(".woff2"):
+            return "font/woff2"
+        if name.endswith(".ico"):
+            return "image/x-icon"
         return "application/octet-stream"
 
     def _json(self, status: int, body: dict) -> None:
