@@ -34,6 +34,8 @@ class ThresholdsSettings(BaseModel):
     alarm_cooldown_seconds: float = 5.0
     yawn_window_frames: int = 45
     yawn_stability_max: float = 0.04
+    head_drop_pitch_deg: float = 25.0
+    head_drop_frames_threshold: int = 30
 
 
 class CalibrationSettingsModel(BaseModel):
@@ -82,6 +84,10 @@ class ThemeSettings(BaseModel):
     overlay_alpha: float = 0.35
 
 
+class FatigueIndexSettings(BaseModel):
+    enabled: bool = True
+
+
 class HttpWebhookSettings(BaseModel):
     url: str
     bearer_token: str | None = None
@@ -128,6 +134,7 @@ class AppSettings(BaseSettings):
     calibration: CalibrationSettingsModel = Field(default_factory=CalibrationSettingsModel)
     frame_quality: FrameQualitySettings = Field(default_factory=FrameQualitySettings)
     theme: ThemeSettings = Field(default_factory=ThemeSettings)
+    fatigue_index: FatigueIndexSettings = Field(default_factory=FatigueIndexSettings)
     alarm_sound_path: Path = Path("audio/alarm.wav")
     sound_sink: SoundSinkSettings = Field(default_factory=SoundSinkSettings)
     headless: bool = False
