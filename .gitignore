@@ -11,6 +11,7 @@ venv/
 
 # Workflow / scratch local — fora do produto
 .claude/
+.superpowers/
 docs/
 scripts/
 config/debug-*.yaml
