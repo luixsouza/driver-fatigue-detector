@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 
 import httpx
@@ -79,7 +80,5 @@ class HttpWebhookSink:
             _log.warning("webhook falhou: %s", e)
 
     def __del__(self):
-        try:
+        with contextlib.suppress(Exception):
             self._client.close()
-        except Exception:
-            pass

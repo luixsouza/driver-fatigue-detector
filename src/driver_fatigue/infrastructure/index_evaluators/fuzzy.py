@@ -14,9 +14,10 @@ import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
 from driver_fatigue.domain.fatigue_index import (
-    FatigueIndex, FatigueInputs, circadian_risk,
+    FatigueIndex,
+    FatigueInputs,
+    circadian_risk,
 )
-
 
 _RULE_LABELS: dict[str, str] = {
     "R1":  "olhos fechados + cabeceio",
@@ -130,7 +131,7 @@ class FuzzyIndexEvaluator:
             top_contributors=top, explain=explain, critical=critical,
         )
 
-    def _top_contributors(self, sim, inp: "FatigueInputs", value: float) -> tuple[tuple[str, ...], str]:
+    def _top_contributors(self, sim, inp: FatigueInputs, value: float) -> tuple[tuple[str, ...], str]:
         """Top regras ativadas. scikit-fuzzy 0.5.0 nao expoe _aggregate_firing
         consistentemente, entao caimos numa heuristica baseada nos inputs:
         qual antecedente esta mais 'ruim' (longe do baseline saudavel)."""

@@ -1,5 +1,4 @@
 """Testes do evaluator com calibração, histerese, cooldown e fala-vs-bocejo."""
-import pytest
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Point
 from driver_fatigue.domain.evaluator import evaluate_fatigue
@@ -7,7 +6,6 @@ from driver_fatigue.domain.value_objects import (
     CalibrationSettings,
     FatigueThresholds,
     FrameQuality,
-    PersonalBaseline,
 )
 
 

@@ -22,7 +22,7 @@ class SourceSettings(BaseModel):
     loop: bool = False
 
     @model_validator(mode="after")
-    def _check_fields_for_kind(self) -> "SourceSettings":
+    def _check_fields_for_kind(self) -> SourceSettings:
         if self.kind == "rtsp" and not self.url:
             raise ValueError("source.url é obrigatório quando kind='rtsp'")
         if self.kind == "file" and self.path is None:
@@ -155,7 +155,7 @@ class AppSettings(BaseSettings):
     web: WebSettings = Field(default_factory=WebSettings)
 
     @model_validator(mode="after")
-    def _check_sink_configs(self) -> "AppSettings":
+    def _check_sink_configs(self) -> AppSettings:
         if "http" in self.sinks and self.http_webhook is None:
             raise ValueError("sinks inclui 'http' mas http_webhook não foi definido")
         if "mqtt" in self.sinks and self.mqtt is None:
@@ -163,6 +163,6 @@ class AppSettings(BaseSettings):
         return self
 
     @classmethod
-    def from_yaml(cls, path: Path) -> "AppSettings":
+    def from_yaml(cls, path: Path) -> AppSettings:
         data = yaml.safe_load(path.read_text())
         return cls(**(data or {}))

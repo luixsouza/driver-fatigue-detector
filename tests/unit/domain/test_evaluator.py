@@ -1,4 +1,3 @@
-import pytest
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Point
 from driver_fatigue.domain.evaluator import evaluate_fatigue

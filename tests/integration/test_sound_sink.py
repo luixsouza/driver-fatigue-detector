@@ -1,9 +1,8 @@
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from driver_fatigue.config.settings import _DEFAULT_ALARM
 from driver_fatigue.domain.entities import FatigueEvent, FatigueState
 from driver_fatigue.infrastructure.alert_sinks.sound import SoundSink
-from driver_fatigue.config.settings import _DEFAULT_ALARM
 
 
 def _event():

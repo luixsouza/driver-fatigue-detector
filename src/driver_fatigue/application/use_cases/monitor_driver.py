@@ -77,10 +77,13 @@ class MonitorDriverUseCase:
         entered_alert = previous.severity != "alert" and current.severity == "alert"
         left_alert = previous.severity == "alert" and current.severity == "normal"
         if entered_alert:
-            if self._validator is not None and faces:
-                if not self._is_confirmed(frame, faces[0], current):
-                    _log.info("ctx_suppressed: alarme inibido por context validator")
-                    return
+            if (
+                self._validator is not None
+                and faces
+                and not self._is_confirmed(frame, faces[0], current)
+            ):
+                _log.info("ctx_suppressed: alarme inibido por context validator")
+                return
             self._sink.notify(FatigueEvent(
                 timestamp=frame.timestamp if frame is not None else float(current.consecutive_frames),
                 state=current,

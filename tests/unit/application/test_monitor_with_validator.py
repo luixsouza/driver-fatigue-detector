@@ -5,7 +5,6 @@ from driver_fatigue.application.use_cases.detect_fatigue import DetectFatigueUse
 from driver_fatigue.application.use_cases.monitor_driver import MonitorDriverUseCase
 from driver_fatigue.domain.entities import (
     FaceLandmarks,
-    FatigueState,
     Frame,
     Point,
 )

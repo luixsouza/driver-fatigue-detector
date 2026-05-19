@@ -5,12 +5,12 @@ import pytest
 
 from driver_fatigue.application.ports import VideoSourcePort
 from driver_fatigue.bootstrap import build_monitor_use_case
-from driver_fatigue.domain.entities import Frame
 from driver_fatigue.config.settings import (
     AppSettings,
     RecordingSettings,
     SourceSettings,
 )
+from driver_fatigue.domain.entities import Frame
 
 
 class FramesFromFile(VideoSourcePort):

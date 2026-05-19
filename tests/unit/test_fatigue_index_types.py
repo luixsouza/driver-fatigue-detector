@@ -1,5 +1,7 @@
 from driver_fatigue.domain.fatigue_index import (
-    FatigueInputs, FatigueIndex, IndexEvaluator,
+    FatigueIndex,
+    FatigueInputs,
+    IndexEvaluator,
 )
 
 

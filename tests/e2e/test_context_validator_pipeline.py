@@ -6,6 +6,7 @@ import pytest
 
 from driver_fatigue.application.ports import VideoSourcePort
 from driver_fatigue.bootstrap import build_monitor_use_case
+from driver_fatigue.config.settings import AppSettings
 from driver_fatigue.domain.entities import (
     FaceLandmarks,
     FatigueEvent,
@@ -13,7 +14,6 @@ from driver_fatigue.domain.entities import (
     Frame,
 )
 from driver_fatigue.domain.value_objects import ContextVerdict
-from driver_fatigue.config.settings import AppSettings
 
 
 class FramesFromFile(VideoSourcePort):

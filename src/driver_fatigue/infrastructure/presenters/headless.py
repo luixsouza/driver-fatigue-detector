@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import signal
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame
@@ -11,10 +12,8 @@ class HeadlessPresenter:
     def __init__(self, install_signal_handler: bool = True) -> None:
         self._stop_requested = False
         if install_signal_handler:
-            try:
+            with contextlib.suppress(ValueError, OSError):
                 signal.signal(signal.SIGINT, self._on_signal)
-            except (ValueError, OSError):
-                pass
 
     def _on_signal(self, signum, frame) -> None:
         self._stop_requested = True

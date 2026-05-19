@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import time
 
 import cv2
@@ -22,17 +23,13 @@ def _try_open(
     if not cap.isOpened():
         return None
     if use_mjpg:
-        try:
+        with contextlib.suppress(Exception):
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        except Exception:
-            pass
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
     cap.set(cv2.CAP_PROP_FPS, fps)
-    try:
+    with contextlib.suppress(Exception):
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-    except Exception:
-        pass
     # Descarta o primeiro frame (driver às vezes solta um buffer estale)
     # e valida que o segundo tem conteúdo real.
     cap.read()

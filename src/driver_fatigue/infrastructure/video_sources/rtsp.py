@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 
@@ -39,10 +40,8 @@ class RtspVideoSource:
             _log.warning("RTSP desconectou; tentativa %d/%d em %.1fs",
                          attempt + 1, self._reconnect_attempts, backoff)
             time.sleep(backoff)
-            try:
+            with contextlib.suppress(Exception):
                 self._cap.release()
-            except Exception:
-                pass
             try:
                 self._cap = self._open()
                 return True
@@ -68,8 +67,6 @@ class RtspVideoSource:
 
     def release(self) -> None:
         if not self._released:
-            try:
+            with contextlib.suppress(Exception):
                 self._cap.release()
-            except Exception:
-                pass
             self._released = True

@@ -1,8 +1,8 @@
 import numpy as np
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame, Point
-from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 from driver_fatigue.infrastructure.rendering.renderer import FrameRenderer
+from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 
 
 def _pts(n, scale=50):

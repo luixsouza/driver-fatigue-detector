@@ -3,7 +3,9 @@ ou quando o usuario optou por desligar via config."""
 from __future__ import annotations
 
 from driver_fatigue.domain.fatigue_index import (
-    FatigueIndex, FatigueInputs, IndexEvaluator,
+    FatigueIndex,
+    FatigueInputs,
+    IndexEvaluator,
 )
 
 

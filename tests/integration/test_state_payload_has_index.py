@@ -1,7 +1,6 @@
 """Confirma que publish_state inclui fatigue_index/severity/explain
 no payload SSE quando o evaluator esta plugado."""
 import time
-from unittest.mock import MagicMock
 
 from driver_fatigue.domain.entities import FatigueState, Frame
 from driver_fatigue.domain.fatigue_index import FatigueIndex

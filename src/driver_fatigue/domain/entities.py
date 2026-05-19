@@ -51,7 +51,7 @@ class FatigueState:
     head_drop_frames: int = 0
 
     @classmethod
-    def initial(cls) -> "FatigueState":
+    def initial(cls) -> FatigueState:
         return cls(
             ear=0.0,
             mar=0.0,

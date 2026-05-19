@@ -24,7 +24,7 @@ def _parse_source(arg: str) -> SourceSettings:
         try:
             return SourceSettings(kind="webcam", index=int(value or "0"))
         except ValueError as e:
-            raise argparse.ArgumentTypeError(f"webcam index inválido: {e}")
+            raise argparse.ArgumentTypeError(f"webcam index inválido: {e}") from e
     if kind == "file":
         if not value:
             raise argparse.ArgumentTypeError("file: requer um path (file:path/to.mp4)")

@@ -7,11 +7,11 @@ contínuo. Tolerante a server fora do ar — silencia falhas e segue.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import queue
 import threading
 import time
-from urllib.parse import urlparse
 
 import cv2
 import httpx
@@ -83,18 +83,12 @@ class MjpegStreamPresenter:
 
     def close(self) -> None:
         self._stop_requested = True
-        try:
+        with contextlib.suppress(queue.Full):
             self._queue.put_nowait(b"")
-        except queue.Full:
-            pass
-        try:
+        with contextlib.suppress(RuntimeError):
             self._worker.join(timeout=1.0)
-        except RuntimeError:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             self._client.close()
-        except Exception:
-            pass
 
     def _loop(self) -> None:
         while not self._stop_requested:

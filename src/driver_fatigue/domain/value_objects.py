@@ -75,13 +75,13 @@ class PersonalBaseline:
     sample_count: int = 0
 
     @classmethod
-    def empty(cls) -> "PersonalBaseline":
+    def empty(cls) -> PersonalBaseline:
         return cls()
 
     def is_calibrated(self, warmup_frames: int) -> bool:
         return self.sample_count >= max(warmup_frames, 1)
 
-    def absorb(self, ear: float, mar: float, pitch_deg: float = 0.0) -> "PersonalBaseline":
+    def absorb(self, ear: float, mar: float, pitch_deg: float = 0.0) -> PersonalBaseline:
         """Atualiza médias e desvios via algoritmo de Welford (online)."""
         n = self.sample_count + 1
         ear_mean = self.ear_rest + (ear - self.ear_rest) / n
@@ -133,7 +133,7 @@ class FrameQuality:
         head_pitch_deg: float = 0.0,
         face_area_ratio: float = 1.0,
         detector_confidence: float = 1.0,
-    ) -> "FrameQuality":
+    ) -> FrameQuality:
         return cls(
             trustworthy=True,
             reason="",
@@ -144,7 +144,7 @@ class FrameQuality:
         )
 
     @classmethod
-    def untrusted(cls, reason: QualityIssue, **kwargs: float) -> "FrameQuality":
+    def untrusted(cls, reason: QualityIssue, **kwargs: float) -> FrameQuality:
         return cls(trustworthy=False, reason=reason, **kwargs)
 
 
@@ -158,7 +158,7 @@ class FrameQualityPolicy:
     max_head_pitch_deg: float = 90.0
 
     @classmethod
-    def production(cls) -> "FrameQualityPolicy":
+    def production(cls) -> FrameQualityPolicy:
         return cls(
             min_face_confidence=0.5,
             min_face_area_ratio=0.05,
@@ -230,9 +230,9 @@ class ContextVerdict:
     latency_ms: float = 0.0
 
     @classmethod
-    def confirm(cls, reason: str = "confirmed") -> "ContextVerdict":
+    def confirm(cls, reason: str = "confirmed") -> ContextVerdict:
         return cls(drowsy=True, confidence=1.0, reason=reason)
 
     @classmethod
-    def reject(cls, reason: str = "rejected") -> "ContextVerdict":
+    def reject(cls, reason: str = "rejected") -> ContextVerdict:
         return cls(drowsy=False, confidence=1.0, reason=reason)

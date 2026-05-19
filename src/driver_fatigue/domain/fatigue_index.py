@@ -73,7 +73,7 @@ class FatigueIndex:
     critical: bool = False
 
     @classmethod
-    def empty(cls) -> "FatigueIndex":
+    def empty(cls) -> FatigueIndex:
         return cls(value=0.0, severity="normal", top_contributors=(), explain="")
 
 

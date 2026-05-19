@@ -14,8 +14,8 @@ import pytest
 
 skfuzzy = pytest.importorskip("skfuzzy")
 
-from driver_fatigue.domain.entities import Frame, FatigueState
-from driver_fatigue.interfaces.web import server as web_server
+from driver_fatigue.domain.entities import FatigueState, Frame  # noqa: E402
+from driver_fatigue.interfaces.web import server as web_server  # noqa: E402
 
 
 def _free_port() -> int:
@@ -58,7 +58,8 @@ def _running_dashboard(port: int):
 
     server_t = threading.Thread(target=httpd.serve_forever, daemon=True)
     pub_t = threading.Thread(target=_publisher, daemon=True)
-    server_t.start(); pub_t.start()
+    server_t.start()
+    pub_t.start()
     try:
         yield f"http://127.0.0.1:{port}"
     finally:

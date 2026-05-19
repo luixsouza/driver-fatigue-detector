@@ -11,7 +11,7 @@ from driver_fatigue.application.ports import (
 )
 from driver_fatigue.application.use_cases.detect_fatigue import DetectFatigueUseCase
 from driver_fatigue.application.use_cases.monitor_driver import MonitorDriverUseCase
-from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
+from driver_fatigue.config.settings import AppSettings
 from driver_fatigue.domain.value_objects import (
     CalibrationSettings,
     FatigueThresholds,
@@ -31,10 +31,10 @@ from driver_fatigue.infrastructure.presenters.headless import HeadlessPresenter
 from driver_fatigue.infrastructure.presenters.mjpeg_push import MjpegStreamPresenter
 from driver_fatigue.infrastructure.presenters.opencv_window import OpenCvWindowPresenter
 from driver_fatigue.infrastructure.rendering.renderer import FrameRenderer
+from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 from driver_fatigue.infrastructure.video_sources.file import FileVideoSource
 from driver_fatigue.infrastructure.video_sources.rtsp import RtspVideoSource
 from driver_fatigue.infrastructure.video_sources.webcam import WebcamVideoSource
-from driver_fatigue.config.settings import AppSettings
 
 _log = logging.getLogger("driver_fatigue.bootstrap")
 

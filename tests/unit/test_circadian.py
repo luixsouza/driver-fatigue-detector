@@ -1,4 +1,5 @@
 import pytest
+
 from driver_fatigue.domain.fatigue_index import circadian_risk
 
 

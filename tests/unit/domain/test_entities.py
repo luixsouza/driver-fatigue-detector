@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
 
-from driver_fatigue.domain.entities import Frame, Point
 from driver_fatigue.domain.entities import (
     FaceLandmarks,
     FatigueEvent,
     FatigueState,
-    Severity,
+    Frame,
+    Point,
 )
 
 

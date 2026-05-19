@@ -86,7 +86,7 @@ def _update_simulated(updates: dict) -> None:
 # Cenario scriptado pra demonstracao. Anda em 10Hz interpolando entre
 # checkpoints. Singleton: so um demo roda por vez (segunda chamada → 409).
 _demo_runner_lock = threading.Lock()
-_demo_runner: "_DemoScenarioRunner | None" = None
+_demo_runner: _DemoScenarioRunner | None = None
 
 
 _DEMO_TIMELINE: list[tuple[float, dict[str, float]]] = [
@@ -458,7 +458,7 @@ class _Handler(BaseHTTPRequestHandler):
             raise
 
     def _sse_send(self, event: dict) -> None:
-        line = f"data: {json.dumps(event)}\n\n".encode("utf-8")
+        line = f"data: {json.dumps(event)}\n\n".encode()
         try:
             self.wfile.write(line)
             self.wfile.flush()
@@ -610,7 +610,7 @@ class _EmbeddedDetectorRunner:
 
     def _build_settings(self):
         from driver_fatigue.config.settings import (
-            AppSettings, SourceSettings,
+            AppSettings,
         )
         cfg = self._config_path
         if cfg is None:
@@ -632,7 +632,11 @@ class _EmbeddedDetectorRunner:
         })
 
     def _run_once(self) -> None:
-        from driver_fatigue.bootstrap import build_monitor_use_case, _build_renderer, _build_index_evaluator
+        from driver_fatigue.bootstrap import (
+            _build_index_evaluator,
+            _build_renderer,
+            build_monitor_use_case,
+        )
         settings = self._build_settings()
         renderer = _build_renderer(settings)
         self._presenter = _InProcessFramePresenter(
@@ -713,7 +717,7 @@ def serve(
         print(f"Detector embutido (in-process) iniciado — fonte={detector_source}"
               + (f" config={detector_config}" if detector_config else ""))
     else:
-        print("Detector NAO iniciado — rode 'driver-fatigue run --dashboard %s' em outro terminal" % target_url)
+        print(f"Detector NAO iniciado — rode 'driver-fatigue run --dashboard {target_url}' em outro terminal")
 
     try:
         httpd.serve_forever()

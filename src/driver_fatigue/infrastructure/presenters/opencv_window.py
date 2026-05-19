@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 import cv2
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame
@@ -39,8 +41,6 @@ class OpenCvWindowPresenter:
     def close(self) -> None:
         if self._closed:
             return
-        try:
+        with contextlib.suppress(cv2.error):
             cv2.destroyWindow(self._window)
-        except cv2.error:
-            pass
         self._closed = True

@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from driver_fatigue.application.use_cases.detect_fatigue import DetectFatigueUseCase
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame, Point

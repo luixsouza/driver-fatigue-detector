@@ -36,12 +36,10 @@ class TestFileVideoSource:
         try:
             first = src.read()
             assert first is not None
-            count = 0
             for _ in range(200):
                 f = src.read()
                 if f is None:
                     break
-                count += 1
             after = src.read()
             assert after is not None
         finally:

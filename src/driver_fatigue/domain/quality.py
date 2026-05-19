@@ -14,7 +14,7 @@ Usa proxies geométricos baratos (sem solvePnP):
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 from driver_fatigue.domain.entities import FaceLandmarks, Point
 from driver_fatigue.domain.value_objects import FrameQuality, FrameQualityPolicy
