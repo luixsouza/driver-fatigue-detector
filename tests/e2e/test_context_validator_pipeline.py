@@ -13,7 +13,7 @@ from driver_fatigue.domain.entities import (
     Frame,
 )
 from driver_fatigue.domain.value_objects import ContextVerdict
-from driver_fatigue.interfaces.config.settings import AppSettings
+from driver_fatigue.config.settings import AppSettings
 
 
 class FramesFromFile(VideoSourcePort):

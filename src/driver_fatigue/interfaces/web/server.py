@@ -609,7 +609,7 @@ class _EmbeddedDetectorRunner:
             self._presenter.request_stop()
 
     def _build_settings(self):
-        from driver_fatigue.interfaces.config.settings import (
+        from driver_fatigue.config.settings import (
             AppSettings, SourceSettings,
         )
         cfg = self._config_path

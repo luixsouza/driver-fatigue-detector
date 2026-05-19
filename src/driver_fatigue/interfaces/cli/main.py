@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from driver_fatigue.bootstrap import build_monitor_use_case
-from driver_fatigue.interfaces.config.settings import (
+from driver_fatigue.config.settings import (
     AppSettings,
     DashboardStreamSettings,
     HttpWebhookSettings,

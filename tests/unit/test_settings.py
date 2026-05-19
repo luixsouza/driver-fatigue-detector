@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from driver_fatigue.interfaces.config.settings import AppSettings
+from driver_fatigue.config.settings import AppSettings
 
 
 class TestAppSettings:

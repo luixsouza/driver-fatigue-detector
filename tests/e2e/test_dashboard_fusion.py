@@ -28,7 +28,7 @@ def _free_port() -> int:
 def _running_dashboard(port: int):
     """Sobe http server + thread que faz publish_state a 5Hz."""
     from driver_fatigue.bootstrap import _build_index_evaluator
-    from driver_fatigue.interfaces.config.settings import AppSettings
+    from driver_fatigue.config.settings import AppSettings
     web_server._api_key = None
     web_server._started_at = time.monotonic()
     web_server._simulated_inputs.update(

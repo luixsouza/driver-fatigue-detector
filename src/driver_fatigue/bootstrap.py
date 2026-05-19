@@ -34,7 +34,7 @@ from driver_fatigue.infrastructure.rendering.renderer import FrameRenderer
 from driver_fatigue.infrastructure.video_sources.file import FileVideoSource
 from driver_fatigue.infrastructure.video_sources.rtsp import RtspVideoSource
 from driver_fatigue.infrastructure.video_sources.webcam import WebcamVideoSource
-from driver_fatigue.interfaces.config.settings import AppSettings
+from driver_fatigue.config.settings import AppSettings
 
 _log = logging.getLogger("driver_fatigue.bootstrap")
 

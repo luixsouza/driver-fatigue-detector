@@ -1,4 +1,4 @@
-from driver_fatigue.interfaces.config.settings import AppSettings
+from driver_fatigue.config.settings import AppSettings
 
 
 def test_default_fatigue_index_enabled():

@@ -1,6 +1,6 @@
 from driver_fatigue.bootstrap import _build_index_evaluator
 from driver_fatigue.infrastructure.fatigue_inference.noop import NoOpIndexEvaluator
-from driver_fatigue.interfaces.config.settings import AppSettings, FatigueIndexSettings
+from driver_fatigue.config.settings import AppSettings, FatigueIndexSettings
 
 
 def test_disabled_returns_noop():
