@@ -39,6 +39,14 @@ Este artigo aplica os cinco princípios SOLID à arquitetura de um sistema de de
 
 \noindent \textbf{Palavras-chave:} SOLID, sistemas ubíquos, arquitetura de software, Clean Architecture, detecção de fadiga, ADR.
 
-% --- Seções do artigo vão aqui ---
+\section{Introdução}
+
+Sistemas ubíquos caracterizam-se por integrar discretamente computação ao ambiente, combinando dispositivos heterogêneos, sensibilidade ao contexto e atuação transparente para o usuário. A detecção de fadiga em motoristas é um exemplo canônico: uma câmera embarcada captura o rosto do condutor, algoritmos de visão computacional inferem indicadores como Eye Aspect Ratio (EAR) e Mouth Aspect Ratio (MAR), e atuadores físicos ou digitais alertam o condutor quando há risco de sonolência. Como toda aplicação ubíqua, o sistema precisa evoluir para acomodar novos sensores, novos algoritmos e novos canais de notificação sem comprometer o núcleo.
+
+Em um trabalho anterior, propusemos uma versão monolítica do detector em Python, integrando OpenCV, Dlib e Pygame em um único script de captura e decisão. Embora funcional, essa versão acumulava responsabilidades, codificava limiares fixos no laço principal e acoplava algoritmos específicos a dispositivos físicos. Tais decisões dificultavam a evolução para novos algoritmos de detecção, novas estratégias de inferência de fadiga e novos meios de atuação --- características esperadas em qualquer sistema ubíquo realista.
+
+Este artigo apresenta a refatoração arquitetural desse detector segundo os cinco princípios SOLID, aplicados a aspectos concretos do sistema. O objetivo é triplo: \textit{(i)} diagnosticar pontos arquiteturais sensíveis a violações de SOLID; \textit{(ii)} aplicar cada princípio a um aspecto específico do detector, mostrando o contraste antes/depois e justificando cada decisão em termos de característica ubíqua; e \textit{(iii)} consolidar o desenho em uma arquitetura integrada documentada por meio de Architecture Decision Records. A Seção~2 sintetiza a fundamentação teórica. A Seção~3 apresenta o diagnóstico arquitetural. A Seção~4 aplica os cinco princípios. A Seção~5 consolida o desenho. As Seções~6 e~7 discutem os limites da abordagem e concluem o trabalho.
+
+% --- Próxima seção ---
 
 \end{document}
