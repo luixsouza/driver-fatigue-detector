@@ -19,10 +19,19 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install system dependencies for OpenCV
+      - name: Install system dependencies (OpenCV + MediaPipe + pygame)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libglib2.0-0 libsdl2-mixer-2.0-0
+          sudo apt-get install -y \
+            libgl1 \
+            libglib2.0-0 \
+            libsdl2-mixer-2.0-0 \
+            libgles2 \
+            libegl1 \
+            libgomp1 \
+            libsm6 \
+            libxext6 \
+            libxrender1
 
       - name: Install package + dev deps
         run: |
