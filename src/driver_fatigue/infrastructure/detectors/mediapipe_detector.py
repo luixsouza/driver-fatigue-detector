@@ -30,26 +30,50 @@ class MediapipeFaceDetector:
         max_faces: int = 1,
         min_detection_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
+        detect_width: int = 640,
     ) -> None:
         resolved_model = Path(model_path) if model_path else _DEFAULT_MODEL
         base_options = mp_tasks.BaseOptions(model_asset_path=str(resolved_model))
+        # RunningMode.VIDEO reusa o tracker entre frames (~2x mais rápido que
+        # IMAGE em CPU). detect_for_video exige timestamp ms monotonicamente
+        # crescente — usamos um contador interno pra garantir.
         options = mp_tasks.vision.FaceLandmarkerOptions(
             base_options=base_options,
+            running_mode=mp_tasks.vision.RunningMode.VIDEO,
             num_faces=max_faces,
             min_face_detection_confidence=min_detection_confidence,
             min_face_presence_confidence=min_detection_confidence,
             min_tracking_confidence=min_tracking_confidence,
         )
         self._landmarker = mp_tasks.vision.FaceLandmarker.create_from_options(options)
+        self._last_ts_ms = 0
+        # Detecção em resolução reduzida: landmarks vêm normalizados (0..1),
+        # então remapeamos pro tamanho original sem perder precisão visual.
+        # 640px é suficiente pro modelo, e cai o custo de detecção em ~3x.
+        self._detect_width = max(160, detect_width)
 
     def detect(self, frame: Frame) -> list[FaceLandmarks]:
-        rgb = cv2.cvtColor(frame.image, cv2.COLOR_BGR2RGB)
+        h, w = frame.image.shape[:2]
+        if w > self._detect_width:
+            scale = self._detect_width / float(w)
+            small = cv2.resize(
+                frame.image,
+                (self._detect_width, int(h * scale)),
+                interpolation=cv2.INTER_LINEAR,
+            )
+        else:
+            small = frame.image
+        rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        results = self._landmarker.detect(mp_image)
+        # Timestamp monotonicamente crescente; usa o do frame se válido,
+        # cai pra contador interno se não (frame.timestamp pode ser float
+        # monotonic_seconds que repetiria entre execuções).
+        ts_ms = max(self._last_ts_ms + 1, int(frame.timestamp * 1000))
+        self._last_ts_ms = ts_ms
+        results = self._landmarker.detect_for_video(mp_image, ts_ms)
         if not results.face_landmarks:
             return []
 
-        h, w = frame.image.shape[:2]
         out: list[FaceLandmarks] = []
         for face in results.face_landmarks:
             pts = [Point(x=lm.x * w, y=lm.y * h) for lm in face]
