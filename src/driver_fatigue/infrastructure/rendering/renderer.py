@@ -9,8 +9,13 @@ from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame
 from driver_fatigue.infrastructure.rendering.glow import apply_glow
 from driver_fatigue.infrastructure.rendering.hud import draw_hud
 from driver_fatigue.infrastructure.rendering.mesh_connections import (
-    HIGHLIGHT_CONNECTIONS,
-    STRUCTURAL_CONNECTIONS,
+    CONTOURS,
+    LEFT_EYE,
+    LEFT_IRIS,
+    LIPS,
+    RIGHT_EYE,
+    RIGHT_IRIS,
+    TESSELATION,
 )
 from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 
@@ -44,34 +49,44 @@ class FrameRenderer:
         all_points: tuple,
         color: tuple[int, int, int],
     ) -> None:
-        """Desenha conexões estruturais (finas) + destacadas (grossas) usando
-        os 468 landmarks. Único loop, single-pass — barato visualmente."""
+        """Desenha mesh completo: tesselacao (~2700 linhas finas) +
+        contornos faciais brilhantes + olhos/boca destacados + 468 pontos."""
         if not all_points or len(all_points) < 468:
             return
-        # Pré-converte landmarks pra inteiros uma vez só (evita repetir em
-        # cada linha). Linha cv2.line é mais rápida que polylines pequenos.
+        n = len(all_points)
+        # Pré-converte pra inteiros uma vez só (cv2 quer tuplas int).
         pts_int = [(int(p.x), int(p.y)) for p in all_points]
 
-        # Estrutural: linhas finas, cor levemente atenuada
-        attenuated = tuple(int(c * 0.55) for c in color)
-        for a, b in STRUCTURAL_CONNECTIONS:
-            if a < len(pts_int) and b < len(pts_int):
-                cv2.line(img, pts_int[a], pts_int[b], attenuated, 1, cv2.LINE_AA)
+        # 1. TESSELATION completa — linhas finas com cor bem atenuada.
+        # Sem antialiasing porque sao milhares de linhas, AA dobra o custo.
+        mesh_color = tuple(int(c * 0.35) for c in color)
+        for a, b in TESSELATION:
+            if a < n and b < n:
+                cv2.line(img, pts_int[a], pts_int[b], mesh_color, 1)
 
-        # Destacadas (olhos+boca): linhas grossas com cor cheia
-        for a, b in HIGHLIGHT_CONNECTIONS:
-            if a < len(pts_int) and b < len(pts_int):
-                cv2.line(img, pts_int[a], pts_int[b], color, 2, cv2.LINE_AA)
+        # 2. CONTOURS faciais (oval, sobrancelhas, nariz, etc) — cor cheia,
+        # ainda fina mas com AA pra leitura limpa.
+        for a, b in CONTOURS:
+            if a < n and b < n:
+                cv2.line(img, pts_int[a], pts_int[b], color, 1, cv2.LINE_AA)
 
-        # Pontos discretos nos vértices destacados (eye/mouth) — dá leitura
-        # de qualquer ângulo, robusto a rosto de lado.
-        seen_pts: set[int] = set()
-        for a, b in HIGHLIGHT_CONNECTIONS:
-            for idx in (a, b):
-                if idx in seen_pts or idx >= len(pts_int):
-                    continue
-                seen_pts.add(idx)
-                cv2.circle(img, pts_int[idx], 2, color, -1, cv2.LINE_AA)
+        # 3. Olhos + boca em destaque — linha grossa.
+        for connections in (LEFT_EYE, RIGHT_EYE, LIPS):
+            for a, b in connections:
+                if a < n and b < n:
+                    cv2.line(img, pts_int[a], pts_int[b], color, 2, cv2.LINE_AA)
+
+        # 4. Iris (se disponivel) — circulos pequenos.
+        for connections in (LEFT_IRIS, RIGHT_IRIS):
+            for a, b in connections:
+                if a < n and b < n:
+                    cv2.line(img, pts_int[a], pts_int[b], color, 1, cv2.LINE_AA)
+
+        # 5. Todos os 468 landmarks como pontos discretos (1px). Da leitura
+        # visual dos vertices mesmo em frames muito rapidos.
+        dot_color = tuple(int(c * 0.85) for c in color)
+        for p in pts_int:
+            cv2.circle(img, p, 1, dot_color, -1)
 
     def render(
         self,
