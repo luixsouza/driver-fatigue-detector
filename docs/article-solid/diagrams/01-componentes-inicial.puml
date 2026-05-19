@@ -1,0 +1,46 @@
+@startuml
+title Arquitetura inicial — Detector de Fadiga Ubíquo
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName "Helvetica"
+
+package "Aquisição" as L1 {
+  [VideoSource] as VS
+  note bottom of VS
+    Webcam, vídeo, RTSP
+  end note
+}
+
+package "Comunicação" as L2 {
+  [REST /video/push] as REST
+  [API Key Auth] as Auth
+}
+
+package "Processamento e Regras de Negócio" as L3 {
+  [Use Cases\n(application)] as UC
+  [Domain\n(EAR/MAR, FatigueIndex)] as DOM
+}
+
+package "Armazenamento" as L4 {
+  [JsonlSink\n(eventos)] as JS
+  [Config YAML] as YAML
+  [Logs] as LOG
+}
+
+package "Apresentação e Atuação" as L5 {
+  [Web Cockpit\n(React/Tailwind)] as WEB
+  [AlertSinks\n(sound/mqtt/http/log)] as AS
+}
+
+VS --> UC : frame
+REST --> UC : frame remoto
+Auth -- REST
+UC --> DOM
+UC --> JS
+UC --> AS
+UC --> WEB
+YAML ..> UC : config
+LOG <.. UC
+
+@enduml
