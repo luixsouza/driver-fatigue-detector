@@ -57,6 +57,38 @@ O conceito de computação ubíqua foi introduzido por \textbf{Weiser (1991)} co
 
 Os princípios SOLID, popularizados por \textbf{Martin (2002, 2019)}, são heurísticas de design orientado a objetos voltadas à manutenibilidade e à extensibilidade. SRP defende que uma classe deve ter uma única razão para mudar; OCP, que o código seja aberto para extensão e fechado para modificação; LSP, que subtipos respeitem o contrato de seus supertipos; ISP, que clientes não dependam de métodos que não usam; e DIP, que módulos de alto nível dependam de abstrações, não de detalhes. \textbf{Bass et al.\ (2021)} situam esses princípios no contexto mais amplo de arquitetura de software como decisões de longo prazo, formalizadas por meio de Architecture Decision Records (\textbf{Nygard, 2011}).
 
+\section{Proposta arquitetural}
+
+O detector de fadiga em sua forma evoluída expõe cinco camadas funcionais, ilustradas na Figura~\ref{fig:componentes-inicial}. A camada de \textit{aquisição} encapsula fontes de vídeo heterogêneas (webcam local, arquivo de vídeo, fluxo RTSP). A camada de \textit{comunicação} expõe um endpoint REST autenticado por chave de API que permite empurrar frames de fontes remotas. A camada de \textit{processamento e regras de negócio} concentra os casos de uso e o domínio (cálculos de EAR/MAR e índice de fadiga). A camada de \textit{armazenamento} persiste eventos em formato JSONL, mantém configuração em YAML e produz logs estruturados. A camada de \textit{apresentação e atuação} reúne uma interface web em React/Tailwind e múltiplos canais de alerta.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{diagrams/png/01-componentes-inicial.png}
+    \caption{Arquitetura inicial em cinco camadas.}
+    \label{fig:componentes-inicial}
+\end{figure}
+\FloatBarrier
+
+A partir desse mapa, identificamos cinco pontos arquiteturais sensíveis: regiões em que a evolução natural do sistema tende a violar princípios SOLID se nenhuma decisão explícita for tomada. A Tabela~\ref{tab:pontos-sensiveis} apresenta esses pontos, o princípio em risco em cada caso, o sintoma esperado e a característica ubíqua envolvida. Cada ponto é tratado em uma subseção da Seção~4.
+
+\begin{table}[htbp]
+\centering
+\caption{Pontos arquiteturais sensíveis identificados.}
+\label{tab:pontos-sensiveis}
+\small
+\begin{tabular}{p{3.3cm}lp{4.6cm}p{3.1cm}}
+\toprule
+\textbf{Ponto sensível} & \textbf{Princípio} & \textbf{Sintoma esperado} & \textbf{Característica ubíqua} \\
+\midrule
+Loop principal monolítico & SRP & Toda alteração força edição do mesmo arquivo; testes unitários inviáveis & Escalabilidade \\
+Detector facial \textit{hard-coded} & OCP & Trocar de algoritmo exige reescrever o pipeline de detecção & Heterogeneidade de algoritmos \\
+Validadores de contexto heterogêneos & LSP & Assinaturas divergentes; adicionar validador quebra o orquestrador & Sensibilidade ao contexto \\
+Interface ``alerta'' inflada & ISP & Canais silenciosos forçados a implementar métodos de áudio & Heterogeneidade de atuadores \\
+Motor de inferência acoplado & DIP & Substituir limiar por fuzzy/ML exige cirurgia no núcleo & Mobilidade computacional \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 % --- Próxima seção ---
 
 \end{document}
