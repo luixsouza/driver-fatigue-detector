@@ -1,0 +1,33 @@
+@startuml
+title DIP — Inferência de fadiga via Strategy
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName "Helvetica"
+
+package "Domain (núcleo)" {
+  interface IndexEvaluator <<Protocol>> {
+    +evaluate(inputs): FatigueIndex
+  }
+  class EvaluateFatigueUseCase
+}
+
+package "Infrastructure (adapters)" {
+  class FuzzyIndexEvaluator
+  class NoOpIndexEvaluator
+  class MLIndexEvaluator <<proposto>>
+}
+
+IndexEvaluator <|.. FuzzyIndexEvaluator
+IndexEvaluator <|.. NoOpIndexEvaluator
+IndexEvaluator <|.. MLIndexEvaluator
+
+EvaluateFatigueUseCase --> IndexEvaluator
+
+note right of IndexEvaluator
+  Núcleo depende da abstração.
+  Bootstrap injeta a implementação
+  por configuração.
+end note
+
+@enduml
