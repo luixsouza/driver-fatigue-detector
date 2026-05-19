@@ -14,9 +14,10 @@
 Flávio Filho\inst{4}, Fellipe T.\inst{5}, Lucas Moraes\inst{6}}
 
 \address{Instituto Federal de Goiás -- Câmpus Inhumas (IFG)\\
-Bacharelado em Engenharia de Software -- Inhumas, GO -- Brasil
-\email{julliely.sousa@gmail.com, luixst1@gmail.com, luisohernandez27@gmail.com,
-engenheiro.flaviofilho@gmail.com, Fellipet03@gmail.com, lucaogmoraes@gmail.com}
+Bacharelado em Engenharia de Software\\
+Inhumas, GO -- Brasil\\
+\footnotesize\texttt{julliely.sousa@gmail.com, luixst1@gmail.com, luisohernandez27@gmail.com}\\
+\footnotesize\texttt{engenheiro.flaviofilho@gmail.com, Fellipet03@gmail.com, lucaogmoraes@gmail.com}
 }
 
 \begin{document}
@@ -35,13 +36,13 @@ Aplicamos os cinco princípios SOLID à arquitetura de um detector de fadiga em 
 
 \section{Introdução}
 
-\hspace{1,27cm}A detecção de fadiga em motoristas é um exemplo canônico de sistema ubíquo: uma câmera embarcada captura o rosto do condutor, algoritmos de visão computacional inferem indicadores como \textit{Eye Aspect Ratio} (EAR) e \textit{Mouth Aspect Ratio} (MAR), e múltiplos canais alertam o condutor. Como toda aplicação ubíqua, o sistema precisa acomodar novos sensores, algoritmos e meios de notificação sem comprometer o núcleo.
+\hspace{1,27cm}A detecção de fadiga em motoristas é um exemplo canônico de sistema ubíquo: uma câmera captura o rosto do condutor, algoritmos de visão computacional inferem indicadores como \textit{Eye Aspect Ratio} (EAR) e \textit{Mouth Aspect Ratio} (MAR), e múltiplos canais alertam o condutor. Como toda aplicação ubíqua, o sistema precisa acomodar novos sensores, algoritmos e canais sem comprometer o núcleo.
 
-Em trabalho anterior, propusemos uma versão monolítica do detector em Python (OpenCV, Dlib, Pygame), na qual responsabilidades, limiares e algoritmos conviviam em um único laço. Este artigo apresenta a refatoração desse detector segundo os cinco princípios SOLID. Diagnosticamos pontos arquiteturais sensíveis (Seção~\ref{sec:proposta}), aplicamos cada princípio a um aspecto concreto (Seção~\ref{sec:solid}), consolidamos o desenho em diagrama integrado e ADRs (Seção~\ref{sec:consolidada}) e discutimos os limites (Seção~\ref{sec:discussao}).
+Em trabalho anterior, propusemos uma versão monolítica do detector (OpenCV, Dlib, Pygame), na qual responsabilidades, limiares e algoritmos conviviam em um único laço. Este artigo refatora esse detector segundo os cinco princípios SOLID: diagnosticamos pontos sensíveis (Seção~\ref{sec:proposta}), aplicamos cada princípio (Seção~\ref{sec:solid}), consolidamos em diagrama e ADRs (Seção~\ref{sec:consolidada}) e discutimos os limites (Seção~\ref{sec:discussao}).
 
 \section{Fundamentação teórica}
 
-\hspace{1,27cm}A computação ubíqua, introduzida por Weiser (1991) e sistematizada por Satyanarayanan (2001), reúne propriedades --- heterogeneidade, mobilidade, sensibilidade ao contexto, transparência, escalabilidade --- que guiam o diagnóstico deste trabalho. Os princípios SOLID, popularizados por Martin (2002, 2019), são heurísticas de design para manutenibilidade e extensibilidade: SRP (responsabilidade única), OCP (aberto para extensão, fechado para modificação), LSP (substituibilidade), ISP (segregação de interfaces) e DIP (inversão de dependência). Bass et al.\ (2021) situam essas heurísticas como decisões de longo prazo formalizáveis por meio de \textit{Architecture Decision Records} (Nygard, 2011).
+\hspace{1,27cm}A computação ubíqua, introduzida por Weiser (1991) e sistematizada por Satyanarayanan (2001), reúne propriedades --- heterogeneidade, mobilidade, sensibilidade ao contexto e escalabilidade --- que guiam o diagnóstico deste trabalho. Os princípios SOLID (Martin, 2002, 2019) são heurísticas de design para manutenibilidade: SRP, OCP, LSP, ISP e DIP. Bass et al.\ (2021) e Nygard (2011) formalizam decisões arquiteturais por meio de \textit{Architecture Decision Records} (ADRs).
 
 \section{Proposta arquitetural}
 \label{sec:proposta}
@@ -84,7 +85,7 @@ Inferência acoplada ao laço & DIP & Trocar limiar por fuzzy/ML exige cirurgia 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.65\textwidth]{diagrams/png/02-srp-use-cases.png}
+    \includegraphics[width=0.8\textwidth]{diagrams/png/02-srp-use-cases.png}
     \caption{SRP: separação em casos de uso.}
     \label{fig:srp}
 \end{figure}
@@ -97,7 +98,7 @@ A separação habilita \textit{escalabilidade}: em cenários ubíquos com múlti
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.65\textwidth]{diagrams/png/03-ocp-detector.png}
+    \includegraphics[width=0.8\textwidth]{diagrams/png/03-ocp-detector.png}
     \caption{OCP: detector facial como porta plugável.}
     \label{fig:ocp}
 \end{figure}
@@ -110,7 +111,7 @@ A escolha responde à \textit{heterogeneidade de dispositivos}: o mesmo sistema 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.6\textwidth]{diagrams/png/04-lsp-validators.png}
+    \includegraphics[width=0.8\textwidth]{diagrams/png/04-lsp-validators.png}
     \caption{LSP: validadores com contrato uniforme.}
     \label{fig:lsp}
 \end{figure}
@@ -123,7 +124,7 @@ A garantia de contrato uniforme sustenta a \textit{sensibilidade ao contexto}: v
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.65\textwidth]{diagrams/png/05-isp-alert-sinks.png}
+    \includegraphics[width=0.8\textwidth]{diagrams/png/05-isp-alert-sinks.png}
     \caption{ISP: \texttt{AlertSink} minimal com Composite.}
     \label{fig:isp}
 \end{figure}
@@ -136,7 +137,7 @@ A interface mínima absorve a \textit{heterogeneidade de atuadores} típica de s
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.7\textwidth]{diagrams/png/06-dip-index-evaluator.png}
+    \includegraphics[width=0.8\textwidth]{diagrams/png/06-dip-index-evaluator.png}
     \caption{DIP: inferência via Strategy.}
     \label{fig:dip}
 \end{figure}
@@ -184,16 +185,15 @@ $+$ adicionar/remover canal sem mexer no núcleo; $+$ falha isolada por \textit{
 \section{Discussão}
 \label{sec:discussao}
 
-\hspace{1,27cm}Duas características ubíquas tornam SOLID particularmente valioso aqui. A \textbf{heterogeneidade} é capturada pelo ADR-01: o mesmo detector precisa rodar com MediaPipe em \textit{laptop}, OpenVINO em \textit{edge} e ONNX em servidor; sem OCP$+$DIP, cada destino exigiria \textit{fork} do \textit{pipeline}. A \textbf{sensibilidade ao contexto} aparece nos validadores (LSP) e na inferência (DIP): o sistema adapta-se a luz e oclusão, e a estratégia de decisão pode mudar conforme o cenário.
+\hspace{1,27cm}Duas características ubíquas tornam SOLID particularmente valioso aqui. A \textbf{heterogeneidade} é capturada pelo ADR-01: o mesmo detector precisa rodar com MediaPipe em \textit{laptop}, OpenVINO em \textit{edge} ou ONNX em servidor, e sem OCP$+$DIP cada destino exigiria \textit{fork} do \textit{pipeline}. A \textbf{sensibilidade ao contexto} aparece nos validadores (LSP) e na inferência (DIP): o sistema adapta-se a luz e oclusão, e a estratégia de decisão muda conforme o cenário.
 
-SOLID não é gratuito. O \textit{hot path} de captura e pré-processamento, que roda a 30~FPS, perderia desempenho se sujeito a múltiplas indireções por \textit{frame}. Mantemos esse trecho linear dentro do \textit{adapter} concreto, com SOLID concentrado apenas na fronteira entre detector e caso de uso.
-
-Para dispositivos com restrição severa (\textit{ESP32-CAM}, \textit{Raspberry Pi Zero}), defendemos \textbf{aplicação parcial por camada}: SOLID pleno nas camadas superiores (domínio, aplicação, portas), e SOLID apenas na fronteira da camada \textit{edge}, cujo interior pode ser procedural e otimizado para o \textit{hardware}.
+SOLID não é gratuito. O \textit{hot path} de captura a 30~FPS perderia desempenho com múltiplas indireções por \textit{frame}, então o concentramos apenas na fronteira entre detector e caso de uso. Para dispositivos restritos (\textit{ESP32-CAM}, \textit{Raspberry Pi Zero}), defendemos \textbf{aplicação parcial por camada}: SOLID pleno nas camadas superiores (domínio, aplicação, portas) e SOLID apenas na fronteira da camada \textit{edge}, cujo interior pode ser procedural e otimizado para o \textit{hardware}.
 
 \section{Considerações finais}
 
-\hspace{1,27cm}A refatoração rendeu três efeitos práticos: a lógica de decisão pôde ser testada sem câmera, novos algoritmos passaram a ser adicionados como \textit{adapters}, e as decisões ficaram registradas em ADRs. O contraste mais visível apareceu na inferência: migrar de um limiar fixo para um motor \textit{fuzzy} passou de cirurgia no \texttt{main} a uma troca por configuração. Como trabalho futuro, planeja-se um \texttt{MLIndexEvaluator} treinado com dados reais e a portabilidade do \textit{adapter} de detecção para \textit{hardware} embarcado.
+\hspace{1,27cm}A refatoração permitiu testar a lógica de decisão sem câmera, adicionar novos algoritmos como \textit{adapters} e registrar decisões em ADRs. O contraste mais visível apareceu na inferência: migrar de limiar fixo para motor \textit{fuzzy} passou de cirurgia no \texttt{main} a uma troca por configuração. Trabalho futuro: \texttt{MLIndexEvaluator} treinado com dados reais e portabilidade do \textit{adapter} de detecção para \textit{hardware} embarcado.
 
+\vspace{6pt}
 \section*{Referências}
 
 \noindent \textbf{ARAUJO, R. B.} Computação ubíqua: princípios, tecnologias e desafios. \textit{Anais do XXI SBRC}, 2003.
