@@ -1,0 +1,44 @@
+\documentclass[12pt]{article}
+
+\usepackage{placeins}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{sbc-template}
+\usepackage{graphicx,url}
+\usepackage{booktabs}
+\lstset{
+    breaklines=false,
+    basicstyle=\ttfamily\small,
+    columns=fullflexible
+}
+\usepackage[brazil]{babel}
+\sloppy
+
+\title{Aplicação dos Princípios SOLID na Arquitetura de\\ um Detector de Fadiga Ubíquo}
+
+\author{Julliely S. Silva\inst{1}, Luis Eduardo S. Teles\inst{1}, Luis Felipe H. Penariol\inst{1},\\
+Flávio Filho\inst{1}, Fellipe T.\inst{1}, Lucas Moraes\inst{1}}
+
+\address{Instituto Federal de Goiás -- Câmpus Inhumas (IFG)\\
+Bacharelado em Engenharia de Software -- Inhumas, GO -- Brasil
+\email{julliely.sousa@gmail.com, luixst1@gmail.com, luisohernandez27@gmail.com,
+engenheiro.flaviofilho@gmail.com, Fellipet03@gmail.com, lucaogmoraes@gmail.com}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This paper applies the five SOLID principles to the architecture of a real-time driver fatigue detection system, a ubiquitous application that combines computer vision, contextual validation and multimodal fusion. Starting from a monolithic baseline, we identify five architectural sensitive points whose evolution risks violating SOLID, and present a refactored Clean Architecture organized in domain, application, infrastructure and interface layers. Each principle is anchored in a concrete aspect of the system --- face landmark detection, context validators, fatigue inference strategy and pluggable alert sinks. We consolidate the design through three Architecture Decision Records and discuss the limits of applying SOLID to resource-constrained ubiquitous devices.
+\end{abstract}
+
+\begin{resumo}
+Este artigo aplica os cinco princípios SOLID à arquitetura de um sistema de detecção de fadiga em motoristas em tempo real, uma aplicação ubíqua que combina visão computacional, validação contextual e fusão multimodal. Partindo de uma versão monolítica como linha de base, identificamos cinco pontos arquiteturais sensíveis cuja evolução tende a violar SOLID, e apresentamos uma refatoração em Clean Architecture organizada em camadas de domínio, aplicação, infraestrutura e interfaces. Cada princípio é ancorado em um aspecto concreto do sistema --- detecção de marcos faciais, validadores de contexto, estratégia de inferência de fadiga e saídas de alerta plugáveis. Consolidamos o desenho por meio de três Architecture Decision Records e discutimos os limites de aplicar SOLID em dispositivos ubíquos com restrição de recursos.
+\end{resumo}
+
+\noindent \textbf{Palavras-chave:} SOLID, sistemas ubíquos, arquitetura de software, Clean Architecture, detecção de fadiga, ADR.
+
+% --- Seções do artigo vão aqui ---
+
+\end{document}
