@@ -1,0 +1,54 @@
+@startuml
+title Arquitetura consolidada — SOLID aplicado
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName "Helvetica"
+
+package "Interfaces" {
+  [Web Cockpit] as WEB
+  [CLI] as CLI
+}
+
+package "Application (use cases + ports)" {
+  [ProcessFrameUseCase] as UC1
+  [EvaluateFatigueUseCase] as UC2
+  [ValidatePreconditionsUseCase] as UC3
+  interface "FaceLandmarkDetector\n«DIP»«OCP»" as PD
+  interface "VideoSource\n«DIP»«OCP»" as PV
+  interface "ContextValidator\n«DIP»«LSP»" as PC
+  interface "IndexEvaluator\n«DIP»«OCP»" as PI
+  interface "AlertSink\n«DIP»«ISP»" as PA
+}
+
+package "Domain" {
+  [Entities / Value Objects] as DOM
+  [EAR / MAR / FatigueIndex] as METR
+}
+
+package "Infrastructure (adapters)" {
+  [MediaPipeDetector] as ADET
+  [WebcamSource / FileSource / RtspSource] as AVS
+  [ImageQualityValidator\nHeadPoseValidator\nOcclusionValidator] as AVAL
+  [FuzzyIndexEvaluator / NoOpIndexEvaluator] as AIE
+  [LogSink / JsonlSink / MqttSink\nHttpWebhookSink / SoundSink\nCompositeAlertSink] as ASINK
+}
+
+WEB --> UC1
+CLI --> UC1
+UC1 --> PV
+UC1 --> PD
+UC1 --> PC
+UC1 --> PA
+UC2 --> PI
+UC1 --> DOM
+UC2 --> DOM
+UC2 --> METR
+
+PD <|.. ADET
+PV <|.. AVS
+PC <|.. AVAL
+PI <|.. AIE
+PA <|.. ASINK
+
+@enduml
