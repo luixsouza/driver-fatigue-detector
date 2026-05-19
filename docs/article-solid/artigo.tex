@@ -211,6 +211,20 @@ $+$ adicionar/remover canal sem mexer no núcleo; $+$ falha isolada por \textit{
 \end{tabular}
 \end{table}
 
+\section{Discussão}
+
+\subsection{Características ubíquas que tornam SOLID relevante}
+
+Duas características ubíquas tornam a aplicação de SOLID particularmente valiosa em nosso sistema. A \textbf{heterogeneidade} é capturada pelo ADR-01: o mesmo detector precisa rodar com \texttt{MediaPipe} em laptop, eventualmente \texttt{OpenVINO} em \textit{edge devices} Intel e \texttt{ONNX} em servidor com GPU; sem OCP+DIP, cada novo destino exigiria um \textit{fork} do pipeline. A \textbf{sensibilidade ao contexto} aparece nos validadores (LSP) e na inferência fuzzy (DIP): o sistema adapta-se a luz ambiente, oclusão por óculos e ângulo de cabeça, e a estratégia de decisão pode mudar conforme o cenário (modo noturno empregando modelo diferente do diurno).
+
+\subsection{Onde SOLID pode ser contraproducente}
+
+O \textit{hot path} de captura e pré-processamento de frame --- \texttt{VideoSource.read()} seguido de conversão de cor e \texttt{Detector.detect\_landmarks()} --- roda a 30 quadros por segundo, e cada microssegundo conta. Aplicar Strategy, Visitor ou Chain-of-Responsibility neste trecho introduziria \textit{overhead} de invocação virtual e perda de localidade de \textit{cache} que poderiam baixar o FPS efetivo. Justifica-se manter este trecho linear e acoplado dentro do \textit{adapter} concreto (\texttt{MediaPipeDetector.detect}), com SOLID concentrado apenas na \textbf{fronteira} entre detector e caso de uso --- não dentro dele.
+
+\subsection{SOLID em dispositivos restritos: postura do grupo}
+
+O detector, em sua forma atual, roda em laptop ou desktop, mas a aplicação ubíqua natural envolveria portar o sistema para hardware embarcado (\texttt{ESP32-CAM}, \texttt{Raspberry Pi Zero}). Defendemos uma postura de \textbf{aplicação parcial e por camada}: nas camadas superiores --- domínio, aplicação, portas --- SOLID se aplica plenamente, pois envolve poucos objetos, mudanças pouco frequentes em \textit{runtime} e ganho claro em testabilidade. Na camada de \textit{edge}, em contraste, SOLID se aplica apenas na \textbf{fronteira} (uma porta única para o caso de uso); internamente, o \textit{adapter} pode ser procedural, com \textit{buffers} pré-alocados e zero indireção, otimizado para o \textit{hardware} específico. Essa postura evita o dogmatismo de ``SOLID em tudo'' e respeita a realidade de que sistemas ubíquos têm camadas com perfis de recursos radicalmente diferentes.
+
 % --- Próxima seção ---
 
 \end{document}
