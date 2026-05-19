@@ -173,6 +173,44 @@ Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detec
 
 \textbf{Justificativa ubíqua:} \textit{mobilidade computacional}. A mesma decisão de fadiga pode ser tomada no \textit{edge} (laptop do motorista, fuzzy leve) ou na nuvem (modelo ML pesado quando há conectividade); DIP permite mover a lógica entre \textit{tiers} sem reescrever o núcleo.
 
+\section{Arquitetura consolidada}
+
+A Figura~\ref{fig:consolidada} apresenta o desenho integrado após aplicação dos cinco princípios. As cinco portas (\texttt{FaceLandmarkDetector}, \texttt{VideoSource}, \texttt{ContextValidator}, \texttt{IndexEvaluator}, \texttt{AlertSink}) ficam expostas pela camada de aplicação, demarcadas com estereótipos «DIP», «OCP», «LSP» e «ISP» conforme o princípio dominante em cada uma. Os \textit{adapters} concretos vivem em \texttt{infrastructure/}, e a camada de domínio permanece livre de qualquer detalhe técnico.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\columnwidth]{diagrams/png/07-arquitetura-consolidada.png}
+    \caption{Arquitetura consolidada com pontos de extensão marcados.}
+    \label{fig:consolidada}
+\end{figure}
+\FloatBarrier
+
+A Tabela~\ref{tab:adrs} sintetiza três Architecture Decision Records que registram as decisões arquiteturais mais importantes consolidadas neste desenho, no formato \textbf{Nygard (2011)}.
+
+\begin{table}[htbp]
+\centering
+\caption{ADRs consolidados.}
+\label{tab:adrs}
+\small
+\begin{tabular}{p{0.9cm}p{6.6cm}p{4.8cm}}
+\toprule
+\textbf{ADR} & \textbf{Decisão e contexto} & \textbf{Consequências} \\
+\midrule
+\textbf{01} (Aceito) &
+\textbf{Detector facial como porta plugável.} Detector originalmente \texttt{dlib} \textit{hard-coded}; trocar exigia editar o laço principal. Introduzimos \texttt{FaceLandmark\-Detector} como \texttt{Protocol} em \texttt{application/ports.py}; \texttt{MediaPipeDetector} é apenas uma implementação. \textbf{OCP + DIP.} &
+$+$ troca de detector por configuração; $+$ teste com \textit{fake}. $-$ um nível de indireção; $-$ \textit{factory} de \textit{bootstrap}. \\
+\midrule
+\textbf{02} (Aceito) &
+\textbf{Inferência via Strategy com fallback NoOp.} Lógica de decisão antes atrelada a limiar fixo. \texttt{IndexEvaluator} no domínio, com \texttt{FuzzyIndexEvaluator} (12 regras) e \texttt{NoOpIndexEvaluator} (\textit{feature flag} desligada). \textbf{DIP + OCP}, LSP implícito. &
+$+$ \textit{toggle} por config; $+$ caminho aberto para \texttt{MLIndexEvaluator}. $-$ aumento na superfície de testes; $-$ \texttt{NoOp} precisa permanecer compatível. \\
+\midrule
+\textbf{03} (Aceito) &
+\textbf{AlertSinks segregados via Composite.} Notificação antes misturava som, log e webhooks. Interface minimal \texttt{AlertSink.publish(event)} com cinco \textit{sinks} especializados e \texttt{CompositeAlertSink} agregador. \textbf{ISP + SRP.} &
+$+$ adicionar/remover canal sem mexer no núcleo; $+$ falha isolada por \textit{sink}. $-$ muitos arquivos pequenos; $-$ política de falha parcial a definir. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 % --- Próxima seção ---
 
 \end{document}
