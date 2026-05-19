@@ -21,3 +21,7 @@ web/dist/
 .superpowers/
 scripts/
 config/debug-*.yaml
+# Screenshots de debug do dev (paste de prints na raiz)
+image*.png
+image*.jpg
+image*.jpeg
