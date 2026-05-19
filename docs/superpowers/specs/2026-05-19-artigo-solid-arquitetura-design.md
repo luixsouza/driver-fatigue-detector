@@ -24,7 +24,15 @@ A entrega inclui também slides para apresentação oral (15 min + 5 min de argu
 
 Isso preserva contraste antes/depois sem precisar reescrever a história inteira do projeto. As "soluções ingênuas" descritas em cada princípio na Parte II referenciam padrões concretos do código monolítico anterior (ex.: `dlib.get_frontal_face_detector()` chamado direto no loop principal).
 
-**Autores:** mesmos três do artigo anterior do grupo (Julliely S. Silva, Luis Eduardo S. Teles, Luis Felipe H. Penariol). Confirmar no momento da redação.
+**Autores (6 integrantes):**
+- Julliely S. Silva — `julliely.sousa@gmail.com`
+- Luis Eduardo S. Teles — `luixst1@gmail.com`
+- Luis Felipe H. Penariol — `luisohernandez27@gmail.com`
+- [Nome a confirmar] — `engenheiro.flaviofilho@gmail.com`
+- [Nome a confirmar] — `Fellipet03@gmail.com`
+- [Nome a confirmar] — `lucaogmoraes@gmail.com`
+
+**Pendência editorial:** obter os nomes completos dos 3 novos coautores antes do fechamento do `.tex`. No template SBC, autores acima de 3 podem exigir ajuste de espaçamento na seção `\author` — verificar na primeira compilação.
 
 ## 3. Estrutura do artigo (≤ 6 páginas)
 
