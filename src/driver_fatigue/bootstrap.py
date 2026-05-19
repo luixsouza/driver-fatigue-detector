@@ -261,6 +261,7 @@ def build_monitor_use_case(
         min_validator_confidence=settings.context_validator.min_confidence,
         fail_safe_on_error=settings.context_validator.fail_safe_on_error,
         state_publisher=state_publisher,
+        state_publish_every_frames=settings.dashboard_stream.state_publish_every_frames,
     )
 
 

@@ -19,13 +19,13 @@ thresholds:
   mar_threshold: 0.65
 
   # Quantos frames consecutivos com olho fechado disparam alerta.
-  # 22 frames @ 30fps = ~0.75s. Piscar normal dura 100-400ms (3-12 frames),
-  # então 22 é seguro pra evitar falso positivo de piscada longa.
-  consecutive_frames: 22
+  # 28 frames @ 30fps = ~0.95s. Piscar normal dura 100-400ms (3-12 frames),
+  # então 28 é seguro pra evitar falso positivo de piscada longa.
+  consecutive_frames: 28
 
-  # Warning aparece a 70% do limite acima (~15 frames, ~0.5s). Reduz
-  # avisos espúrios sem perder a oportunidade de pré-alertar.
-  warning_ratio: 0.70
+  # Warning aparece a 80% do limite acima (~22 frames, ~0.75s). Mais
+  # conservador — só pré-alerta quando piscada está realmente prolongada.
+  warning_ratio: 0.80
 
   recovery_frames: 6
   min_alert_duration_frames: 5
@@ -75,8 +75,9 @@ context_validator:
 
 dashboard_stream:
   enabled: false
-  jpeg_quality: 88
-  max_fps: 30.0
+  jpeg_quality: 92                 # ↑ (era 88) — overlay com mais detalhe
+  max_fps: 60.0                    # ↑ (era 30) — deixa hardware ditar o teto
+  state_publish_every_frames: 2    # ↓ (era 6) — UI vê 3x mais updates por frame
 
 recording:
   path: null

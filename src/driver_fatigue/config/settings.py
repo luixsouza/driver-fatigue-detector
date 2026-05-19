@@ -78,8 +78,11 @@ class ContextValidatorSettings(BaseModel):
 class DashboardStreamSettings(BaseModel):
     enabled: bool = False
     push_url: str = "http://127.0.0.1:8000/api/video/push"
-    jpeg_quality: int = 88
-    max_fps: float = 30.0
+    jpeg_quality: int = 92
+    max_fps: float = 60.0
+    # Publica state SSE a cada N frames (1=todo frame, 6=1/6 dos frames).
+    # Mais baixo → UI mais responsiva, mais throughput de network/render.
+    state_publish_every_frames: int = 2
 
 
 class ThemeSettings(BaseModel):

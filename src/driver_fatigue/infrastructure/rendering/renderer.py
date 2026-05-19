@@ -6,10 +6,12 @@ import cv2
 import numpy as np
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame
-from driver_fatigue.infrastructure.rendering.curves import catmull_rom_closed
 from driver_fatigue.infrastructure.rendering.glow import apply_glow
 from driver_fatigue.infrastructure.rendering.hud import draw_hud
-from driver_fatigue.infrastructure.rendering.overlay import draw_filled_overlay
+from driver_fatigue.infrastructure.rendering.mesh_connections import (
+    HIGHLIGHT_CONNECTIONS,
+    STRUCTURAL_CONNECTIONS,
+)
 from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 
 
@@ -28,9 +30,6 @@ class FrameRenderer:
             return self._theme.color_warning
         return self._theme.color_normal
 
-    def _smooth(self, pts) -> np.ndarray:
-        return catmull_rom_closed(pts, self._theme.smoothing_steps)
-
     def _update_fps(self, ts: float) -> float:
         if self._last_ts is not None:
             dt = max(1e-6, ts - self._last_ts)
@@ -38,6 +37,41 @@ class FrameRenderer:
             self._fps_ema = 0.9 * self._fps_ema + 0.1 * inst if self._fps_ema else inst
         self._last_ts = ts
         return self._fps_ema
+
+    def _draw_mesh(
+        self,
+        img: np.ndarray,
+        all_points: tuple,
+        color: tuple[int, int, int],
+    ) -> None:
+        """Desenha conexões estruturais (finas) + destacadas (grossas) usando
+        os 468 landmarks. Único loop, single-pass — barato visualmente."""
+        if not all_points or len(all_points) < 468:
+            return
+        # Pré-converte landmarks pra inteiros uma vez só (evita repetir em
+        # cada linha). Linha cv2.line é mais rápida que polylines pequenos.
+        pts_int = [(int(p.x), int(p.y)) for p in all_points]
+
+        # Estrutural: linhas finas, cor levemente atenuada
+        attenuated = tuple(int(c * 0.55) for c in color)
+        for a, b in STRUCTURAL_CONNECTIONS:
+            if a < len(pts_int) and b < len(pts_int):
+                cv2.line(img, pts_int[a], pts_int[b], attenuated, 1, cv2.LINE_AA)
+
+        # Destacadas (olhos+boca): linhas grossas com cor cheia
+        for a, b in HIGHLIGHT_CONNECTIONS:
+            if a < len(pts_int) and b < len(pts_int):
+                cv2.line(img, pts_int[a], pts_int[b], color, 2, cv2.LINE_AA)
+
+        # Pontos discretos nos vértices destacados (eye/mouth) — dá leitura
+        # de qualquer ângulo, robusto a rosto de lado.
+        seen_pts: set[int] = set()
+        for a, b in HIGHLIGHT_CONNECTIONS:
+            for idx in (a, b):
+                if idx in seen_pts or idx >= len(pts_int):
+                    continue
+                seen_pts.add(idx)
+                cv2.circle(img, pts_int[idx], 2, color, -1, cv2.LINE_AA)
 
     def render(
         self,
@@ -49,29 +83,16 @@ class FrameRenderer:
         color = self._color_for(state.severity)
 
         for lm in landmarks_list:
-            if self._theme.show_face_oval:
-                face_curve = self._smooth(lm.face_oval)
-                cv2.polylines(
-                    img, [face_curve.astype(np.int32)],
-                    isClosed=True, color=color, thickness=1, lineType=cv2.LINE_AA,
-                )
+            # Mesh completo a partir dos 468 landmarks (fallback gracioso
+            # se não vier all_points — preserva compatibilidade com mocks).
+            if lm.all_points:
+                self._draw_mesh(img, lm.all_points, color)
+            elif self._theme.show_face_oval:
+                # Fallback legacy: só o oval do rosto
+                pts = np.array([(int(p.x), int(p.y)) for p in lm.face_oval])
+                cv2.polylines(img, [pts], True, color, 1, cv2.LINE_AA)
 
-            for region in (lm.left_eye_contour, lm.right_eye_contour):
-                curve = self._smooth(region)
-                img = draw_filled_overlay(img, curve, color, self._theme.overlay_alpha)
-                cv2.polylines(
-                    img, [curve.astype(np.int32)],
-                    isClosed=True, color=color, thickness=2, lineType=cv2.LINE_AA,
-                )
-
-            for region in (lm.mouth_outer,):
-                curve = self._smooth(region)
-                img = draw_filled_overlay(img, curve, color, self._theme.overlay_alpha)
-                cv2.polylines(
-                    img, [curve.astype(np.int32)],
-                    isClosed=True, color=color, thickness=2, lineType=cv2.LINE_AA,
-                )
-
+            # Iris destaca-se com circulo cheio (não vem nos mesh connections)
             for iris in (lm.left_iris, lm.right_iris):
                 if iris is None:
                     continue

@@ -33,6 +33,10 @@ class FaceLandmarks:
     mouth_outer: tuple[Point, ...]
     mouth_inner: tuple[Point, ...]
     face_oval: tuple[Point, ...]
+    # Todos os 468 landmarks faciais (MediaPipe FaceMesh). Permite ao renderer
+    # desenhar tesselação completa do rosto — útil pra visual + robustez quando
+    # rosto está de lado. Opcional pra não quebrar mocks de teste antigos.
+    all_points: tuple[Point, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

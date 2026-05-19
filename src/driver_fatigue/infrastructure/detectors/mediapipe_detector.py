@@ -88,6 +88,7 @@ class MediapipeFaceDetector:
                 mouth_outer=tuple(pts[i] for i in MOUTH_OUTER_MAR_INDICES),
                 mouth_inner=tuple(pts[i] for i in MOUTH_INNER_INDICES),
                 face_oval=tuple(pts[i] for i in FACE_OVAL_INDICES),
+                all_points=tuple(pts),  # 468 (sem iris) ou 478 (com iris)
             ))
         return out
 
