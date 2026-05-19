@@ -47,6 +47,16 @@ Em um trabalho anterior, propusemos uma versão monolítica do detector em Pytho
 
 Este artigo apresenta a refatoração arquitetural desse detector segundo os cinco princípios SOLID, aplicados a aspectos concretos do sistema. O objetivo é triplo: \textit{(i)} diagnosticar pontos arquiteturais sensíveis a violações de SOLID; \textit{(ii)} aplicar cada princípio a um aspecto específico do detector, mostrando o contraste antes/depois e justificando cada decisão em termos de característica ubíqua; e \textit{(iii)} consolidar o desenho em uma arquitetura integrada documentada por meio de Architecture Decision Records. A Seção~2 sintetiza a fundamentação teórica. A Seção~3 apresenta o diagnóstico arquitetural. A Seção~4 aplica os cinco princípios. A Seção~5 consolida o desenho. As Seções~6 e~7 discutem os limites da abordagem e concluem o trabalho.
 
+\section{Fundamentação teórica}
+
+\subsection{Sistemas ubíquos}
+
+O conceito de computação ubíqua foi introduzido por \textbf{Weiser (1991)} como uma visão na qual computadores se integram discretamente ao ambiente, deixando de competir pela atenção do usuário. \textbf{Satyanarayanan (2001)} sistematizou os desafios técnicos da pervasive computing, destacando heterogeneidade, mobilidade, sensibilidade ao contexto e adaptação dinâmica. No contexto brasileiro, \textbf{Araujo (2003)} descreve as tecnologias habilitadoras e os principais desafios de pesquisa. As características recorrentes em quaisquer dessas referências --- heterogeneidade de dispositivos, mobilidade computacional, sensibilidade ao contexto, transparência e escalabilidade --- guiam o diagnóstico arquitetural deste trabalho.
+
+\subsection{Princípios SOLID}
+
+Os princípios SOLID, popularizados por \textbf{Martin (2002, 2019)}, são heurísticas de design orientado a objetos voltadas à manutenibilidade e à extensibilidade. SRP defende que uma classe deve ter uma única razão para mudar; OCP, que o código seja aberto para extensão e fechado para modificação; LSP, que subtipos respeitem o contrato de seus supertipos; ISP, que clientes não dependam de métodos que não usam; e DIP, que módulos de alto nível dependam de abstrações, não de detalhes. \textbf{Bass et al.\ (2021)} situam esses princípios no contexto mais amplo de arquitetura de software como decisões de longo prazo, formalizadas por meio de Architecture Decision Records (\textbf{Nygard, 2011}).
+
 % --- Próxima seção ---
 
 \end{document}
