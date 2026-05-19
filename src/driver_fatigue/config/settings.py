@@ -7,6 +7,12 @@ import yaml
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Resources empacotados junto com o driver_fatigue/ — alarm.wav,
+# face_landmarker.task ficam em src/driver_fatigue/resources/.
+# settings.py vive em driver_fatigue/config/, então parent.parent = driver_fatigue/.
+_RESOURCES_DIR = Path(__file__).resolve().parent.parent / "resources"
+_DEFAULT_ALARM = _RESOURCES_DIR / "audio" / "alarm.wav"
+
 
 class SourceSettings(BaseModel):
     kind: Literal["webcam", "rtsp", "file"] = "webcam"
@@ -135,7 +141,7 @@ class AppSettings(BaseSettings):
     frame_quality: FrameQualitySettings = Field(default_factory=FrameQualitySettings)
     theme: ThemeSettings = Field(default_factory=ThemeSettings)
     fatigue_index: FatigueIndexSettings = Field(default_factory=FatigueIndexSettings)
-    alarm_sound_path: Path = Path("audio/alarm.wav")
+    alarm_sound_path: Path = _DEFAULT_ALARM
     sound_sink: SoundSinkSettings = Field(default_factory=SoundSinkSettings)
     headless: bool = False
 

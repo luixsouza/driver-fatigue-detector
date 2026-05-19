@@ -8,7 +8,10 @@ import mediapipe.tasks as mp_tasks
 
 from driver_fatigue.domain.entities import FaceLandmarks, Frame, Point
 
-_DEFAULT_MODEL = Path(__file__).resolve().parents[4] / "models" / "face_landmarker.task"
+_DEFAULT_MODEL = (
+    Path(__file__).resolve().parents[2]
+    / "resources" / "models" / "face_landmarker.task"
+)
 
 LEFT_EYE_EAR_INDICES  = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE_EAR_INDICES = [362, 385, 387, 263, 373, 380]

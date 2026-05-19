@@ -38,7 +38,7 @@ theme:
   smoothing_steps: 12
   overlay_alpha: 0.20
 
-alarm_sound_path: audio/alarm.wav
+# alarm_sound_path: customize aqui (default: resource empacotado)
 
 sound_sink:
   start_volume: 0.5

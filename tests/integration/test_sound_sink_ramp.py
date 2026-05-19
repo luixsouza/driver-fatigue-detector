@@ -6,6 +6,7 @@ import pytest
 
 from driver_fatigue.domain.entities import FatigueEvent, FatigueState
 from driver_fatigue.infrastructure.alert_sinks.sound import SoundSink
+from driver_fatigue.config.settings import _DEFAULT_ALARM
 
 
 def _event():
@@ -29,7 +30,7 @@ class TestVolumeRamp:
         pygame_mock.mixer.Sound.return_value = sound
         clock = FakeClock(0.0)
         sink = SoundSink(
-            sound_path=Path("audio/alarm.wav"),
+            sound_path=_DEFAULT_ALARM,
             start_volume=0.4, peak_volume=1.0, ramp_seconds=2.0,
             cooldown_seconds=0.0, clock=clock,
         )
@@ -42,7 +43,7 @@ class TestVolumeRamp:
         pygame_mock.mixer.Sound.return_value = sound
         clock = FakeClock(0.0)
         sink = SoundSink(
-            sound_path=Path("audio/alarm.wav"),
+            sound_path=_DEFAULT_ALARM,
             start_volume=0.4, peak_volume=1.0, ramp_seconds=2.0,
             cooldown_seconds=0.0, clock=clock,
         )
@@ -59,7 +60,7 @@ class TestVolumeRamp:
         pygame_mock.mixer.Sound.return_value = sound
         clock = FakeClock(0.0)
         sink = SoundSink(
-            sound_path=Path("audio/alarm.wav"),
+            sound_path=_DEFAULT_ALARM,
             start_volume=0.4, peak_volume=1.0, ramp_seconds=2.0,
             cooldown_seconds=0.0, clock=clock,
         )
@@ -77,7 +78,7 @@ class TestCooldown:
         pygame_mock.mixer.Sound.return_value = sound
         clock = FakeClock(0.0)
         sink = SoundSink(
-            sound_path=Path("audio/alarm.wav"),
+            sound_path=_DEFAULT_ALARM,
             cooldown_seconds=5.0, clock=clock,
             ramp_seconds=0.0,
         )
@@ -94,7 +95,7 @@ class TestCooldown:
         pygame_mock.mixer.Sound.return_value = sound
         clock = FakeClock(0.0)
         sink = SoundSink(
-            sound_path=Path("audio/alarm.wav"),
+            sound_path=_DEFAULT_ALARM,
             cooldown_seconds=5.0, clock=clock,
             ramp_seconds=0.0,
         )
