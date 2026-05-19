@@ -1,5 +1,6 @@
 import { Header } from "./components/header/Header.jsx";
 import { StatusBanner } from "./components/status/StatusBanner.jsx";
+import { AlertOverlay } from "./components/status/AlertOverlay.jsx";
 import { VideoCard } from "./components/video/VideoCard.jsx";
 import { FatigueGauge } from "./components/gauge/FatigueGauge.jsx";
 import { SliderPanel } from "./components/sliders/SliderPanel.jsx";
@@ -8,15 +9,20 @@ import { Timeline } from "./components/timeline/Timeline.jsx";
 import { useEventStream } from "./hooks/useEventStream.js";
 import { useSimulatedInputs } from "./hooks/useSimulatedInputs.js";
 import { useVideoHealth } from "./hooks/useVideoHealth.js";
+import { useFpsTracker } from "./hooks/useFpsTracker.js";
 
 export default function App() {
   const { status, lastState, events } = useEventStream();
   const { inputs, setInputs, demoState, startDemo, stopDemo } = useSimulatedInputs();
   const { videoOnline } = useVideoHealth();
+  const fps = useFpsTracker(lastState);
+
+  const alerting = lastState?.severity === "alert";
 
   return (
     <div className="min-h-screen bg-surface-0 text-text-0">
-      <Header status={status} />
+      <Header status={status} fps={fps} />
+      <AlertOverlay active={alerting} />
       <main className="mx-auto mt-6 grid max-w-[1480px] grid-cols-12 gap-6 px-7 pb-9">
         <div className="col-span-12">
           <StatusBanner lastState={lastState} />

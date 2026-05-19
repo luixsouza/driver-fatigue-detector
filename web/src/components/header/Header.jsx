@@ -1,6 +1,6 @@
 import { ConnBadge } from "./ConnBadge.jsx";
 
-export function Header({ status }) {
+export function Header({ status, fps = 0 }) {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface-0/70 px-7 py-4 backdrop-blur">
       <div className="flex items-center gap-3">
@@ -14,7 +14,15 @@ export function Header({ status }) {
           </p>
         </div>
       </div>
-      <ConnBadge status={status} />
+      <div className="flex items-center gap-3">
+        {fps > 0 && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-1 px-3 py-1 font-mono text-xs tabular-nums text-text-1">
+            <span className="text-text-2">FPS</span>
+            <b className="text-text-0">{fps}</b>
+          </span>
+        )}
+        <ConnBadge status={status} />
+      </div>
     </header>
   );
 }

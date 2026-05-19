@@ -1,94 +1,120 @@
+import clsx from "clsx";
+
 /**
- * Banner full-width que mostra o estado global do sistema:
- *  - "Aguardando rosto" → sem deteccao
- *  - "Calibrando NN/60" → durante warmup
- *  - "Qualidade ruim: {reason}" → quality.trustworthy === false
- *  - "Normal" → operando
- *  - "ATENÇÃO" → warning
- *  - "ALERTA — FADIGA DETECTADA" → severity === alert
+ * Banner full-width que mostra o estado global do sistema. Cores e tokens
+ * alinhados com o tema (severity-*, surface-*) em vez de tailwind defaults.
  */
 export function StatusBanner({ lastState }) {
   const s = lastState;
 
-  // Sem estado ainda
   if (!s) {
     return (
-      <div className="rounded-lg border border-border-1 bg-surface-1 px-4 py-3 text-sm text-text-2">
-        Aguardando deteção facial...
-      </div>
+      <Wrap accent="line">
+        <Title text="Aguardando detecção facial…" muted />
+      </Wrap>
     );
   }
 
-  // Calibrando
   if (s.calibrating) {
     const progress = Math.round((s.calibration_progress ?? 0) * 100);
-    const frames = Math.round((s.calibration_progress ?? 0) * 60);
+    const frames = Math.round((s.calibration_progress ?? 0) * 45);
     return (
-      <div className="rounded-lg border-l-4 border-amber-400 bg-amber-500/10 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-amber-300">
-            Calibrando perfil pessoal — fique relaxado olhando pra câmera
+      <Wrap accent="warning">
+        <div className="flex items-center justify-between gap-4">
+          <Title text="Calibrando perfil pessoal — fique relaxado olhando pra câmera" accent="warning" />
+          <span className="font-mono text-xs text-severity-warning/80">
+            {frames}/45 frames · {progress}%
           </span>
-          <span className="font-mono text-xs text-amber-200">{frames}/60 frames ({progress}%)</span>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-amber-900/40">
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-severity-warning/15">
           <div
-            className="h-full bg-amber-400 transition-all duration-200"
+            className="h-full bg-severity-warning transition-all duration-200"
             style={{ width: `${progress}%` }}
           />
         </div>
-      </div>
+      </Wrap>
     );
   }
 
-  // Qualidade ruim
   if (s.quality_ok === false) {
     return (
-      <div className="rounded-lg border-l-4 border-slate-500 bg-slate-500/10 px-4 py-3 text-sm text-slate-300">
-        <strong>Qualidade do frame insuficiente</strong>
-        {s.quality_reason && <span className="ml-2 text-slate-400">— {s.quality_reason}</span>}
-      </div>
+      <Wrap accent="line">
+        <div className="flex items-center justify-between gap-4">
+          <Title text="Qualidade do frame insuficiente" muted />
+          {s.quality_reason && (
+            <span className="font-mono text-xs text-text-2">{s.quality_reason}</span>
+          )}
+        </div>
+      </Wrap>
     );
   }
 
-  // Severity-based
   const severity = s.severity ?? "normal";
   if (severity === "alert") {
     return (
-      <div className="animate-pulse rounded-lg border-l-4 border-red-500 bg-red-500/15 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <span className="text-base font-bold uppercase tracking-wide text-red-300">
-            ⚠ Alerta — Fadiga detectada
-          </span>
-          <span className="font-mono text-xs text-red-200">
+      <Wrap accent="alert" pulsing>
+        <div className="flex items-center justify-between gap-4">
+          <Title text="⚠ ALERTA — FADIGA DETECTADA" accent="alert" bold />
+          <span className="font-mono text-xs text-severity-alert">
             {s.consecutive_frames ?? 0} frames consecutivos
           </span>
         </div>
-      </div>
+      </Wrap>
     );
   }
 
   if (severity === "warning") {
     return (
-      <div className="rounded-lg border-l-4 border-yellow-500 bg-yellow-500/10 px-4 py-3">
-        <span className="text-sm font-semibold text-yellow-300">
-          Atenção — sinais iniciais de fadiga
-        </span>
-      </div>
+      <Wrap accent="warning">
+        <Title text="Atenção — sinais iniciais de fadiga" accent="warning" />
+      </Wrap>
     );
   }
 
-  // Normal
   return (
-    <div className="rounded-lg border-l-4 border-emerald-500/70 bg-emerald-500/5 px-4 py-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-emerald-300">
-          Operando normalmente
-        </span>
-        <span className="font-mono text-xs text-emerald-200/70">
+    <Wrap accent="normal">
+      <div className="flex items-center justify-between gap-4">
+        <Title text="Operando normalmente" accent="normal" />
+        <span className="font-mono text-xs text-severity-normal/70">
           EAR {s.ear?.toFixed(3) ?? "—"} · MAR {s.mar?.toFixed(3) ?? "—"}
         </span>
       </div>
+    </Wrap>
+  );
+}
+
+// --- Subcomponents ---
+
+const ACCENT = {
+  normal:  "border-severity-normal/60  bg-severity-normal/5",
+  warning: "border-severity-warning/60 bg-severity-warning/10",
+  alert:   "border-severity-alert      bg-severity-alert/15",
+  line:    "border-line                bg-surface-1",
+};
+
+function Wrap({ accent, pulsing, children }) {
+  return (
+    <div
+      className={clsx(
+        "rounded-card border-l-4 px-4 py-3",
+        ACCENT[accent] || ACCENT.line,
+        pulsing && "animate-pulse",
+      )}
+    >
+      {children}
     </div>
+  );
+}
+
+function Title({ text, accent, bold, muted }) {
+  const color =
+    accent === "alert"   ? "text-severity-alert"   :
+    accent === "warning" ? "text-severity-warning" :
+    accent === "normal"  ? "text-severity-normal"  :
+    muted ? "text-text-2" : "text-text-0";
+  return (
+    <span className={clsx(bold ? "text-base font-bold uppercase tracking-wide" : "text-sm font-semibold", color)}>
+      {text}
+    </span>
   );
 }

@@ -12,13 +12,18 @@ afterEach(() => vi.useRealTimers());
 describe("useSimulatedInputs", () => {
   it("debounces POST /api/inputs", async () => {
     const { result } = renderHook(() => useSimulatedInputs());
+    // Hook faz um GET bootstrap inicial; conta apenas POSTs daqui em diante.
+    const postCount = () => global.fetch.mock.calls.filter(
+      ([, opts]) => opts && opts.method === "POST",
+    ).length;
+
     act(() => { result.current.setInputs({ bpm: 60 }); });
     act(() => { result.current.setInputs({ bpm: 55 }); });
     act(() => { result.current.setInputs({ bpm: 50 }); });
 
-    expect(global.fetch).not.toHaveBeenCalledWith("/api/inputs", expect.anything());
+    expect(postCount()).toBe(0);
     act(() => { vi.advanceTimersByTime(150); });
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(postCount()).toBe(1);
   });
 
   it("startDemo sets demoState to running on 202", async () => {
