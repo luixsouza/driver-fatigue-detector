@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from driver_fatigue.domain.entities import FaceLandmarks, FatigueState, Frame
-from driver_fatigue.domain.rendering_theme import RenderingTheme
+from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 from driver_fatigue.infrastructure.rendering.curves import catmull_rom_closed
 from driver_fatigue.infrastructure.rendering.glow import apply_glow
 from driver_fatigue.infrastructure.rendering.hud import draw_hud

@@ -1,6 +1,6 @@
 import pytest
 
-from driver_fatigue.domain.rendering_theme import RenderingTheme
+from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 
 
 class TestRenderingTheme:

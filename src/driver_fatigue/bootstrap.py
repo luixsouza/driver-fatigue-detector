@@ -11,7 +11,7 @@ from driver_fatigue.application.ports import (
 )
 from driver_fatigue.application.use_cases.detect_fatigue import DetectFatigueUseCase
 from driver_fatigue.application.use_cases.monitor_driver import MonitorDriverUseCase
-from driver_fatigue.domain.rendering_theme import RenderingTheme
+from driver_fatigue.infrastructure.rendering.theme import RenderingTheme
 from driver_fatigue.domain.value_objects import (
     CalibrationSettings,
     FatigueThresholds,
