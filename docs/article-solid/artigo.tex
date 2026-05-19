@@ -1,4 +1,4 @@
-\documentclass[10pt,a4paper,twocolumn]{article}
+\documentclass[12pt]{article}
 
 \usepackage{placeins}
 \usepackage{amsmath}
@@ -10,8 +10,8 @@
 
 \title{Aplicação dos Princípios SOLID na Arquitetura de\\ um Detector de Fadiga Ubíquo}
 
-\author{Julliely S. Silva\inst{1}, Luis Eduardo S. Teles\inst{1}, Luis Felipe H. Penariol\inst{1},\\
-Flávio Filho\inst{1}, Fellipe T.\inst{1}, Lucas Moraes\inst{1}}
+\author{Julliely S. Silva\inst{1}, Luis Eduardo S. Teles\inst{2}, Luis Felipe H. Penariol\inst{3},\\
+Flávio Filho\inst{4}, Fellipe T.\inst{5}, Lucas Moraes\inst{6}}
 
 \address{Instituto Federal de Goiás -- Câmpus Inhumas (IFG)\\
 Bacharelado em Engenharia de Software -- Inhumas, GO -- Brasil
@@ -24,65 +24,67 @@ engenheiro.flaviofilho@gmail.com, Fellipet03@gmail.com, lucaogmoraes@gmail.com}
 \maketitle
 
 \begin{abstract}
-We apply the five SOLID principles to the architecture of a real-time driver fatigue detection system, a ubiquitous application combining computer vision and contextual validation. Starting from a monolithic baseline, we identify five sensitive points, refactor the system into a Clean Architecture (domain, application, infrastructure, interfaces), and anchor each principle in a concrete aspect: face landmark detection, context validators, fatigue inference and pluggable alert sinks. We consolidate the design with three ADRs and discuss the limits of SOLID in resource-constrained ubiquitous contexts.
+We apply the five SOLID principles to the architecture of a real-time driver fatigue detection system, a ubiquitous application combining computer vision and contextual validation. Starting from a monolithic baseline, we identify five architectural sensitive points, refactor the system into a Clean Architecture (domain, application, infrastructure, interfaces), and anchor each principle in a concrete aspect: face landmark detection, context validators, fatigue inference, and pluggable alert sinks. We consolidate the design with three ADRs and discuss the limits of SOLID in resource-constrained ubiquitous contexts.
 \end{abstract}
 
 \begin{resumo}
-Aplicamos os cinco princípios SOLID à arquitetura de um detector de fadiga em motoristas, sistema ubíquo que combina visão computacional e validação contextual. Partindo de uma versão monolítica, identificamos cinco pontos sensíveis, refatoramos para Clean Architecture (domínio, aplicação, infraestrutura, interfaces) e ancoramos cada princípio em um aspecto concreto: detecção de marcos faciais, validadores de contexto, inferência de fadiga e saídas de alerta plugáveis. Consolidamos o desenho em três ADRs e discutimos os limites de SOLID em contextos ubíquos com restrição de recursos.
+Aplicamos os cinco princípios SOLID à arquitetura de um detector de fadiga em motoristas, sistema ubíquo que combina visão computacional e validação contextual. Partindo de uma versão monolítica, identificamos cinco pontos arquiteturais sensíveis, refatoramos para Clean Architecture (domínio, aplicação, infraestrutura, interfaces) e ancoramos cada princípio em um aspecto concreto: detecção de marcos faciais, validadores de contexto, inferência de fadiga e saídas de alerta plugáveis. Consolidamos o desenho em três ADRs e discutimos os limites de SOLID em contextos ubíquos com restrição de recursos.
 \end{resumo}
 
 \noindent \textbf{Palavras-chave:} SOLID, sistemas ubíquos, arquitetura de software, Clean Architecture, ADR.
 
 \section{Introdução}
 
-A detecção de fadiga em motoristas é um exemplo canônico de sistema ubíquo: uma câmera embarcada captura o rosto do condutor, algoritmos de visão computacional inferem indicadores como Eye Aspect Ratio (EAR) e Mouth Aspect Ratio (MAR), e múltiplos canais alertam o condutor. Como toda aplicação ubíqua, o sistema precisa acomodar novos sensores, algoritmos e canais de notificação sem comprometer o núcleo.
+\hspace{1,27cm}A detecção de fadiga em motoristas é um exemplo canônico de sistema ubíquo: uma câmera embarcada captura o rosto do condutor, algoritmos de visão computacional inferem indicadores como \textit{Eye Aspect Ratio} (EAR) e \textit{Mouth Aspect Ratio} (MAR), e múltiplos canais alertam o condutor. Como toda aplicação ubíqua, o sistema precisa acomodar novos sensores, algoritmos e meios de notificação sem comprometer o núcleo.
 
-Em trabalho anterior, propusemos uma versão monolítica do detector em Python (OpenCV, Dlib, Pygame), na qual responsabilidades, limiares e algoritmos conviviam em um único laço. Este artigo apresenta a refatoração desse detector segundo os cinco princípios SOLID. Diagnosticamos pontos arquiteturais sensíveis (Seção~3), aplicamos cada princípio a um aspecto concreto (Seção~4), consolidamos o desenho em diagrama integrado e ADRs (Seção~5) e discutimos limites (Seção~6).
+Em trabalho anterior, propusemos uma versão monolítica do detector em Python (OpenCV, Dlib, Pygame), na qual responsabilidades, limiares e algoritmos conviviam em um único laço. Este artigo apresenta a refatoração desse detector segundo os cinco princípios SOLID. Diagnosticamos pontos arquiteturais sensíveis (Seção~\ref{sec:proposta}), aplicamos cada princípio a um aspecto concreto (Seção~\ref{sec:solid}), consolidamos o desenho em diagrama integrado e ADRs (Seção~\ref{sec:consolidada}) e discutimos os limites (Seção~\ref{sec:discussao}).
 
 \section{Fundamentação teórica}
 
-A computação ubíqua, introduzida por Weiser (1991) e sistematizada por Satyanarayanan (2001), reúne propriedades --- heterogeneidade, mobilidade, sensibilidade ao contexto, transparência, escalabilidade --- que guiam o diagnóstico arquitetural deste trabalho. Os princípios SOLID, popularizados por Martin (2002, 2019), são heurísticas de design para manutenibilidade e extensibilidade: SRP (responsabilidade única), OCP (aberto para extensão, fechado para modificação), LSP (substituibilidade), ISP (segregação de interfaces) e DIP (inversão de dependência). Bass et al.\ (2021) situam essas heurísticas como decisões de longo prazo formalizáveis por meio de Architecture Decision Records (Nygard, 2011).
+\hspace{1,27cm}A computação ubíqua, introduzida por Weiser (1991) e sistematizada por Satyanarayanan (2001), reúne propriedades --- heterogeneidade, mobilidade, sensibilidade ao contexto, transparência, escalabilidade --- que guiam o diagnóstico deste trabalho. Os princípios SOLID, popularizados por Martin (2002, 2019), são heurísticas de design para manutenibilidade e extensibilidade: SRP (responsabilidade única), OCP (aberto para extensão, fechado para modificação), LSP (substituibilidade), ISP (segregação de interfaces) e DIP (inversão de dependência). Bass et al.\ (2021) situam essas heurísticas como decisões de longo prazo formalizáveis por meio de \textit{Architecture Decision Records} (Nygard, 2011).
 
 \section{Proposta arquitetural}
+\label{sec:proposta}
 
-O detector expõe cinco camadas funcionais (Figura~\ref{fig:componentes-inicial}): \textit{aquisição} (fontes de vídeo heterogêneas), \textit{comunicação} (endpoint REST com chave de API), \textit{aplicação e domínio} (casos de uso, EAR/MAR, índice de fadiga), \textit{armazenamento} (eventos JSONL, configuração YAML) e \textit{apresentação e atuação} (interface web, múltiplos sinks de alerta).
+\hspace{1,27cm}O detector expõe cinco camadas funcionais (Figura~\ref{fig:componentes-inicial}): \textit{aquisição} (fontes de vídeo heterogêneas), \textit{comunicação} (endpoint REST com chave de API), \textit{aplicação e domínio} (casos de uso, EAR/MAR, índice de fadiga), \textit{armazenamento} (eventos JSONL, configuração YAML) e \textit{apresentação e atuação} (interface web, múltiplos \textit{sinks} de alerta).
 
-\begin{figure*}[htbp]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\textwidth]{diagrams/png/01-componentes-inicial.png}
+    \includegraphics[width=0.85\textwidth]{diagrams/png/01-componentes-inicial.png}
     \caption{Arquitetura inicial em cinco camadas.}
     \label{fig:componentes-inicial}
-\end{figure*}
+\end{figure}
 
-A Tabela~\ref{tab:pontos-sensiveis} apresenta cinco pontos sensíveis em que a evolução natural do sistema tenderia a violar SOLID. Cada ponto é tratado em uma subseção da Seção~4.
+A Tabela~\ref{tab:pontos-sensiveis} apresenta cinco pontos sensíveis em que a evolução natural do sistema tenderia a violar SOLID. Cada ponto é tratado em uma subseção da Seção~\ref{sec:solid}.
 
-\begin{table*}[htbp]
+\begin{table}[htbp]
 \centering
 \caption{Pontos arquiteturais sensíveis identificados.}
 \label{tab:pontos-sensiveis}
-\small
-\begin{tabular}{p{3.8cm}lp{5.8cm}p{3.8cm}}
+\footnotesize
+\begin{tabular}{p{3.6cm}lp{4.8cm}p{3.0cm}}
 \toprule
 \textbf{Ponto sensível} & \textbf{Princípio} & \textbf{Sintoma esperado} & \textbf{Característica ubíqua} \\
 \midrule
 Loop principal monolítico & SRP & Toda alteração força edição do mesmo arquivo & Escalabilidade \\
-Detector facial \textit{hard-coded} & OCP & Trocar algoritmo exige reescrever o pipeline & Heterogeneidade \\
-Validadores de contexto ad hoc & LSP & Assinaturas divergentes quebram o orquestrador & Sensibilidade ao contexto \\
-Interface ``alerta'' inflada & ISP & Sinks silenciosos forçados a métodos de áudio & Heterogeneidade de atuadores \\
+Detector \textit{hard-coded} & OCP & Trocar algoritmo exige reescrever o pipeline & Heterogeneidade \\
+Validadores ad hoc & LSP & Assinaturas divergentes quebram o orquestrador & Sensibilidade ao contexto \\
+Interface ``alerta'' inflada & ISP & \textit{Sinks} silenciosos forçados a métodos de áudio & Heterogeneidade de atuadores \\
 Inferência acoplada ao laço & DIP & Trocar limiar por fuzzy/ML exige cirurgia no núcleo & Mobilidade computacional \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 \section{Aplicação dos princípios SOLID}
+\label{sec:solid}
 
 \subsection{SRP --- Responsabilidade única}
 
-No laço monolítico, um único arquivo capturava o frame, extraía landmarks, calculava EAR/MAR, decidia alerta, persistia evento e renderizava a janela. A refatoração separa essas etapas em \texttt{ProcessFrameUseCase} (orquestração), \texttt{VideoSource} (captura), \texttt{FaceLandmarkDetector} (extração), \texttt{Evaluator} (decisão) e \texttt{AlertSink} (publicação), conforme a Figura~\ref{fig:srp}. Cada classe tem uma razão única para mudar, e o orquestrador depende de abstrações na camada de aplicação.
+\hspace{1,27cm}No laço monolítico, um único arquivo capturava o \textit{frame}, extraía \textit{landmarks}, calculava EAR/MAR, decidia alerta, persistia evento e renderizava a janela. A refatoração separa essas etapas em \texttt{ProcessFrameUseCase} (orquestração), \texttt{VideoSource} (captura), \texttt{FaceLandmarkDetector} (extração), \texttt{Evaluator} (decisão) e \texttt{AlertSink} (publicação), conforme a Figura~\ref{fig:srp}. Cada classe tem uma razão única para mudar.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\columnwidth]{diagrams/png/02-srp-use-cases.png}
+    \includegraphics[width=0.65\textwidth]{diagrams/png/02-srp-use-cases.png}
     \caption{SRP: separação em casos de uso.}
     \label{fig:srp}
 \end{figure}
@@ -91,50 +93,50 @@ A separação habilita \textit{escalabilidade}: em cenários ubíquos com múlti
 
 \subsection{OCP --- Aberto/fechado}
 
-A solução ingênua acoplava \texttt{dlib.get\_frontal\_face\_detector()} diretamente ao laço; trocar para MediaPipe ou OpenVINO exigia editar o pipeline. Promovemos \texttt{FaceLandmarkDetector} a interface (\texttt{Protocol}) e movemos a implementação concreta para \texttt{infrastructure/detectors/}. Novos algoritmos são acrescentados como adapters sem tocar nos casos de uso (Figura~\ref{fig:ocp}).
+\hspace{1,27cm}A solução ingênua acoplava \texttt{dlib.get\_frontal\_face\_detector()} diretamente ao laço; trocar para MediaPipe ou OpenVINO exigia editar o pipeline. Promovemos \texttt{FaceLandmarkDetector} a interface (\textit{Protocol}) e movemos a implementação concreta para \texttt{infrastructure/detectors/}. Novos algoritmos são acrescentados como \textit{adapters} sem tocar nos casos de uso (Figura~\ref{fig:ocp}).
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\columnwidth]{diagrams/png/03-ocp-detector.png}
+    \includegraphics[width=0.65\textwidth]{diagrams/png/03-ocp-detector.png}
     \caption{OCP: detector facial como porta plugável.}
     \label{fig:ocp}
 \end{figure}
 
-A escolha responde diretamente à \textit{heterogeneidade de dispositivos}: o mesmo sistema deve rodar de laptops a \textit{edge devices} embarcados, permitindo a troca de detector apenas por configuração.
+A escolha responde à \textit{heterogeneidade de dispositivos}: o mesmo sistema deve rodar de \textit{laptops} a \textit{edge devices} embarcados, permitindo a troca de detector apenas por configuração.
 
 \subsection{LSP --- Substituibilidade}
 
-Os validadores de contexto (qualidade de imagem, oclusão, head pose) coexistiam como funções soltas com assinaturas divergentes, algumas lançando exceções, outras retornando \texttt{None}. Definimos \texttt{ContextValidator} como classe abstrata com método \texttt{validate(ctx) $\to$ ValidationResult}; toda implementação respeita o contrato e jamais lança exceção inesperada (Figura~\ref{fig:lsp}).
+\hspace{1,27cm}Os validadores de contexto (qualidade de imagem, oclusão, \textit{head pose}) coexistiam como funções soltas com assinaturas divergentes, algumas lançando exceções, outras retornando \texttt{None}. Definimos \texttt{ContextValidator} como classe abstrata com método \texttt{validate(ctx) $\to$ ValidationResult}; toda implementação respeita o contrato e jamais lança exceção inesperada (Figura~\ref{fig:lsp}).
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\columnwidth]{diagrams/png/04-lsp-validators.png}
+    \includegraphics[width=0.6\textwidth]{diagrams/png/04-lsp-validators.png}
     \caption{LSP: validadores com contrato uniforme.}
     \label{fig:lsp}
 \end{figure}
 
-A garantia de contrato uniforme sustenta a \textit{sensibilidade ao contexto}: validadores intercambiáveis adaptam o sistema a iluminação, oclusão e ângulo sem propagar erros para a interface --- preservando a transparência prometida ao motorista.
+A garantia de contrato uniforme sustenta a \textit{sensibilidade ao contexto}: validadores intercambiáveis adaptam o sistema a iluminação, oclusão e ângulo sem propagar erros para a interface, preservando a transparência prometida ao motorista.
 
 \subsection{ISP --- Segregação de interfaces}
 
-A função \texttt{alarm()} original misturava som, log e (ao evoluir) MQTT e webhook HTTP, forçando \textit{sinks} silenciosos como JSONL a implementar métodos de áudio. Reduzimos a interface \texttt{AlertSink} a um único método, \texttt{publish(event)}, e segregamos cinco \textit{sinks} especializados (\texttt{Log}, \texttt{Jsonl}, \texttt{Mqtt}, \texttt{HttpWebhook}, \texttt{Sound}). Um \texttt{CompositeAlertSink} agrega-os sem violar o contrato (Figura~\ref{fig:isp}).
+\hspace{1,27cm}A função \texttt{alarm()} original misturava som, \textit{log} e (ao evoluir) MQTT e \textit{webhook} HTTP, forçando \textit{sinks} silenciosos como JSONL a implementar métodos de áudio. Reduzimos a interface \texttt{AlertSink} a um único método, \texttt{publish(event)}, e segregamos cinco \textit{sinks} especializados (\texttt{Log}, \texttt{Jsonl}, \texttt{Mqtt}, \texttt{HttpWebhook}, \texttt{Sound}). Um \texttt{CompositeAlertSink} agrega-os sem violar o contrato (Figura~\ref{fig:isp}).
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\columnwidth]{diagrams/png/05-isp-alert-sinks.png}
+    \includegraphics[width=0.65\textwidth]{diagrams/png/05-isp-alert-sinks.png}
     \caption{ISP: \texttt{AlertSink} minimal com Composite.}
     \label{fig:isp}
 \end{figure}
 
-A interface mínima absorve a \textit{heterogeneidade de atuadores} típica de sistemas ubíquos --- som, painel visual, notificação em nuvem, log local --- sem amarrar nenhum \textit{sink} a métodos que não usa.
+A interface mínima absorve a \textit{heterogeneidade de atuadores} típica de sistemas ubíquos --- som, painel visual, notificação em nuvem, \textit{log} local --- sem amarrar nenhum \textit{sink} a métodos que não usa.
 
 \subsection{DIP --- Inversão de dependência}
 
-A regra ``EAR$<$0{,}25$ por 20 \textit{frames}'' estava embutida no laço, impedindo experimentação. Promovemos \texttt{IndexEvaluator} a interface no domínio, com \texttt{FuzzyIndexEvaluator} (12 regras IF--THEN) e \texttt{NoOpIndexEvaluator} (\textit{fallback}) em \texttt{infrastructure/} (Figura~\ref{fig:dip}). O \textit{bootstrap} injeta a implementação por configuração.
+\hspace{1,27cm}A regra ``EAR$<$0{,}25$ por 20 \textit{frames}'' estava embutida no laço, impedindo experimentação. Promovemos \texttt{IndexEvaluator} a interface no domínio, com \texttt{FuzzyIndexEvaluator} (12 regras IF--THEN) e \texttt{NoOpIndexEvaluator} (\textit{fallback}) em \texttt{infrastructure/} (Figura~\ref{fig:dip}). O \textit{bootstrap} injeta a implementação por configuração.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\columnwidth]{diagrams/png/06-dip-index-evaluator.png}
+    \includegraphics[width=0.7\textwidth]{diagrams/png/06-dip-index-evaluator.png}
     \caption{DIP: inferência via Strategy.}
     \label{fig:dip}
 \end{figure}
@@ -142,53 +144,55 @@ A regra ``EAR$<$0{,}25$ por 20 \textit{frames}'' estava embutida no laço, imped
 A inversão sustenta a \textit{mobilidade computacional}: a decisão pode ser tomada no \textit{edge} com lógica fuzzy leve, ou na nuvem com modelo \textit{ML} pesado, sem alterar o núcleo.
 
 \section{Arquitetura consolidada}
+\label{sec:consolidada}
 
-A Figura~\ref{fig:consolidada} integra as cinco portas (\texttt{VideoSource}, \texttt{FaceLandmarkDetector}, \texttt{ContextValidator}, \texttt{IndexEvaluator}, \texttt{AlertSink}) expostas pela camada de aplicação. Domínio permanece livre de detalhes técnicos; \textit{adapters} concretos vivem em \texttt{infrastructure/}, agrupados por porta.
+\hspace{1,27cm}A Figura~\ref{fig:consolidada} integra as cinco portas (\texttt{VideoSource}, \texttt{FaceLandmarkDetector}, \texttt{ContextValidator}, \texttt{IndexEvaluator}, \texttt{AlertSink}) expostas pela camada de aplicação. O domínio permanece livre de detalhes técnicos; \textit{adapters} concretos vivem em \texttt{infrastructure/}, agrupados por porta.
 
-\begin{figure*}[htbp]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagrams/png/07-arquitetura-consolidada.png}
-    \caption{Arquitetura consolidada com portas e adapters.}
+    \includegraphics[width=0.95\textwidth]{diagrams/png/07-arquitetura-consolidada.png}
+    \caption{Arquitetura consolidada com portas e \textit{adapters}.}
     \label{fig:consolidada}
-\end{figure*}
+\end{figure}
 
 A Tabela~\ref{tab:adrs} sintetiza três ADRs no formato Nygard que registram as decisões mais relevantes.
 
-\begin{table*}[htbp]
+\begin{table}[htbp]
 \centering
 \caption{ADRs consolidados.}
 \label{tab:adrs}
-\small
-\begin{tabular}{p{1.4cm}p{8.5cm}p{5.6cm}}
+\footnotesize
+\begin{tabular}{p{1.0cm}p{8.0cm}p{4.2cm}}
 \toprule
 \textbf{ADR} & \textbf{Decisão e contexto} & \textbf{Consequências} \\
 \midrule
 \textbf{01} &
-\textbf{Detector facial como porta plugável.} Originalmente \texttt{dlib} \textit{hard-coded}. Introduzimos \texttt{FaceLandmark\-Detector} como \texttt{Protocol}; \texttt{MediaPipeDetector} é uma implementação. \textbf{OCP$+$DIP.} &
+\textbf{Detector facial como porta plugável.} Originalmente \texttt{dlib} \textit{hard-coded}. Introduzimos \texttt{FaceLandmarkDetector} como \textit{Protocol}; \texttt{MediaPipeDetector} é uma implementação. \textbf{OCP$+$DIP.} &
 $+$ troca por configuração; $+$ teste com \textit{fake}. $-$ um nível de indireção. \\
 \midrule
 \textbf{02} &
-\textbf{Inferência via Strategy com fallback NoOp.} Lógica antes atrelada a limiar fixo. \texttt{IndexEvaluator} no domínio com \texttt{Fuzzy} (12 regras) e \texttt{NoOp} (flag desligada). \textbf{DIP$+$OCP}, LSP implícito. &
-$+$ \textit{toggle} por config; $+$ caminho aberto para \texttt{MLIndexEvaluator}. $-$ mais cenários de teste. \\
+\textbf{Inferência via Strategy com fallback NoOp.} Lógica antes atrelada a limiar fixo. \texttt{IndexEvaluator} no domínio, com \texttt{Fuzzy} (12 regras) e \texttt{NoOp} (flag desligada). \textbf{DIP$+$OCP}, LSP implícito. &
+$+$ \textit{toggle} por config; $+$ caminho para \texttt{MLIndexEvaluator}. $-$ mais cenários de teste. \\
 \midrule
 \textbf{03} &
-\textbf{AlertSinks segregados via Composite.} Antes, notificação misturava som, log e \textit{webhooks}. \texttt{AlertSink.publish(event)} com cinco \textit{sinks} especializados, agregados por \texttt{Composite}. \textbf{ISP$+$SRP.} &
+\textbf{AlertSinks segregados via Composite.} Notificação antes misturava som, \textit{log} e \textit{webhooks}. \texttt{AlertSink.publish(event)} com cinco \textit{sinks} especializados, agregados por \texttt{Composite}. \textbf{ISP$+$SRP.} &
 $+$ adicionar/remover canal sem mexer no núcleo; $+$ falha isolada por \textit{sink}. $-$ política de falha parcial a definir. \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 \section{Discussão}
+\label{sec:discussao}
 
-Duas características ubíquas tornam SOLID particularmente valioso aqui. A \textbf{heterogeneidade} é capturada pelo ADR-01: o mesmo detector precisa rodar com MediaPipe em laptop, OpenVINO em \textit{edge} e ONNX em servidor; sem OCP$+$DIP, cada destino exigiria \textit{fork} do pipeline. A \textbf{sensibilidade ao contexto} aparece nos validadores (LSP) e na inferência (DIP): o sistema adapta-se a luz e oclusão, e a estratégia de decisão pode mudar conforme o cenário.
+\hspace{1,27cm}Duas características ubíquas tornam SOLID particularmente valioso aqui. A \textbf{heterogeneidade} é capturada pelo ADR-01: o mesmo detector precisa rodar com MediaPipe em \textit{laptop}, OpenVINO em \textit{edge} e ONNX em servidor; sem OCP$+$DIP, cada destino exigiria \textit{fork} do \textit{pipeline}. A \textbf{sensibilidade ao contexto} aparece nos validadores (LSP) e na inferência (DIP): o sistema adapta-se a luz e oclusão, e a estratégia de decisão pode mudar conforme o cenário.
 
-SOLID não é gratuito. O \textit{hot path} de captura e pré-processamento, que roda a 30 FPS, perderia desempenho se sujeito a múltiplas indireções por \textit{frame}. Mantemos esse trecho linear dentro do \textit{adapter} concreto, com SOLID concentrado apenas na fronteira entre detector e caso de uso.
+SOLID não é gratuito. O \textit{hot path} de captura e pré-processamento, que roda a 30~FPS, perderia desempenho se sujeito a múltiplas indireções por \textit{frame}. Mantemos esse trecho linear dentro do \textit{adapter} concreto, com SOLID concentrado apenas na fronteira entre detector e caso de uso.
 
-Para dispositivos com restrição severa (ESP32-CAM, Raspberry Pi Zero), defendemos \textbf{aplicação parcial por camada}: SOLID pleno nas camadas superiores (domínio, aplicação, portas), e SOLID apenas na fronteira da camada \textit{edge}, cujo interior pode ser procedural e otimizado para o \textit{hardware}.
+Para dispositivos com restrição severa (\textit{ESP32-CAM}, \textit{Raspberry Pi Zero}), defendemos \textbf{aplicação parcial por camada}: SOLID pleno nas camadas superiores (domínio, aplicação, portas), e SOLID apenas na fronteira da camada \textit{edge}, cujo interior pode ser procedural e otimizado para o \textit{hardware}.
 
 \section{Considerações finais}
 
-A refatoração rendeu três efeitos práticos: a lógica de decisão pôde ser testada sem câmera, novos algoritmos passaram a ser adicionados como \textit{adapters}, e as decisões ficaram registradas em ADRs. O contraste mais visível apareceu na inferência: migrar de um limiar fixo para um motor fuzzy passou de cirurgia no \texttt{main} a uma troca por configuração. Como trabalho futuro, planeja-se um \texttt{MLIndexEvaluator} treinado com dados reais e a portabilidade do \textit{adapter} de detecção para \textit{hardware} embarcado.
+\hspace{1,27cm}A refatoração rendeu três efeitos práticos: a lógica de decisão pôde ser testada sem câmera, novos algoritmos passaram a ser adicionados como \textit{adapters}, e as decisões ficaram registradas em ADRs. O contraste mais visível apareceu na inferência: migrar de um limiar fixo para um motor \textit{fuzzy} passou de cirurgia no \texttt{main} a uma troca por configuração. Como trabalho futuro, planeja-se um \texttt{MLIndexEvaluator} treinado com dados reais e a portabilidade do \textit{adapter} de detecção para \textit{hardware} embarcado.
 
 \section*{Referências}
 
@@ -200,7 +204,7 @@ A refatoração rendeu três efeitos práticos: a lógica de decisão pôde ser 
 
 \noindent \textbf{MARTIN, R. C.} \textit{Arquitetura Limpa}. Alta Books, 2019.
 
-\noindent \textbf{NYGARD, M.} Documenting Architecture Decisions. 2011. \url{https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions}.
+\noindent \textbf{NYGARD, M.} Documenting Architecture Decisions. 2011. Disponível em: \url{https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions}.
 
 \noindent \textbf{SATYANARAYANAN, M.} Pervasive computing: vision and challenges. \textit{IEEE Personal Communications}, v. 8, n. 4, p. 10--17, 2001.
 

@@ -1,147 +1,164 @@
-%%
-%% sbc-template.sty
-%% Estilo SBC duas colunas, 10pt, A4
-%% Compatível com: \documentclass[10pt,a4paper,twocolumn]{article}
-%%
+% LaTeX definitions for SBC 2001 style
+%
+% Created by Jomi Hubner & Rafael Bordini, june 2001
+% updated march 2005
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{sbc-template}[2026/05/19 SBC Template v4.0 two-column]
+\ProvidesPackage{sbc-template}[2001/06/09]
 
+% margem sup 3.5 cm: há 1,5 cm para header, + 2 cm para top
+% margem inf 2.5 cm: há 1,5 cm para foot, + 1 cm para bottom
+% margem esq/dir 3 cm
+\RequirePackage[a4paper,top=3.5cm,left=3cm,right=3cm,bottom=2.5cm]{geometry}
+
+\parindent 1.27cm
+\parskip   6pt
+
+\flushbottom
+
+% captions
+\RequirePackage[bf,sf,footnotesize,indent]{caption2}
+\setlength{\captionmargin}{0.8cm}
+\renewcommand{\captionfont}{\sffamily\footnotesize\bfseries}
+\renewcommand{\captionlabeldelim}{.}
+
+% font
 \RequirePackage{times}
-\RequirePackage{graphicx}
-\RequirePackage{amsmath}
-\RequirePackage{amssymb}
-\RequirePackage{url}
-\RequirePackage{color}
 
-%%----------------------------------------------------------------------
-%% Geometria A4 — margens 25mm (texto 160 x 247 mm)
-%%----------------------------------------------------------------------
-\setlength{\paperheight}{297mm}
-\setlength{\paperwidth}{210mm}
+\renewcommand{\normalsize}{\@setfontsize\normalsize\@xiipt\@xivpt}
+\newcommand{\XIIIPT}{\@setfontsize\xiiipt{13}{17}}
+\newcommand{\XVIPT}{\@setfontsize\xvipt{16}{20}}
 
-\setlength{\textwidth}{160mm}
-\setlength{\textheight}{247mm}
-\setlength{\oddsidemargin}{-1mm}   % 25mm - 1in = -1mm
-\setlength{\evensidemargin}{-1mm}
-\setlength{\topmargin}{-26mm}      % 25mm - 1in
-\setlength{\headheight}{0mm}
-\setlength{\headsep}{0mm}
-\setlength{\columnsep}{6mm}
-\setlength{\parindent}{4mm}
-\setlength{\parskip}{2pt}
+% new commands
+\newcounter{instn}
+\setcounter{instn}{1}
+\newcommand{\instnum}{\arabic{instn}}
+\newcommand{\inst}[1]{\ensuremath{^{#1}}}
+\newcommand{\nextinstitute}{\\\mbox{}\\[-6pt] \addtocounter{instn}{1}\inst{\instnum}}
+\newcommand{\email}[1]{\\\mbox{}\\[-6pt]\footnotesize\texttt{#1}}
+\renewcommand{\and}{, }
 
-\setlength{\abovecaptionskip}{3pt}
-\setlength{\belowcaptionskip}{3pt}
+% to avoid [...] in the bibliography
+% \item[] instead of \item[\@biblabel{#1}\hfill]
+\def\@lbibitem[#1]#2{\item[]\if@filesw
+      {\let\protect\noexpand
+       \immediate
+       \write\@auxout{\string\bibcite{#2}{#1}}}\fi\ignorespaces}
+\renewenvironment{thebibliography}[1]
+     {\section*{\refname
+        \@mkboth{\MakeUppercase\refname}{\MakeUppercase\refname}}%
+      \list{\@biblabel{\@arabic\c@enumiv}}%
+           {\settowidth\labelwidth{\@biblabel{#1}}%
+            \leftmargin\labelwidth
+            \advance\leftmargin\labelsep
+            %% changed!
+               \itemindent -\leftmargin
+               \itemsep 6pt
+            %%%%%%%%%%%
+            \@openbib@code
+            \usecounter{enumiv}%
+            \let\p@enumiv\@empty
+            \renewcommand\theenumiv{\@arabic\c@enumiv}}%
+      \sloppy
+      \clubpenalty4000
+      \@clubpenalty \clubpenalty
+      \widowpenalty4000%
+      \sfcode`\.\@m}
+     {\def\@noitemerr
+       {\@latex@warning{Empty `thebibliography' environment}}%
+      \endlist}
 
-%%----------------------------------------------------------------------
-%% Section headings — bold, compactos
-%%----------------------------------------------------------------------
+
+% itens
+\setlength\leftmargini   {1.27cm}
+\setlength\leftmargin    {\leftmargini}
+\setlength\leftmarginii  {\leftmargini}
+\setlength\leftmarginiii {\leftmargini}
+\setlength\leftmarginiv  {\leftmargini}
+\setlength  \labelsep    {.5em}
+\setlength  \labelwidth  {\leftmargini}
+\addtolength\labelwidth  {-\labelsep}
+\def\@listI{\leftmargin\leftmargini
+            \parsep 0\p@ \@plus1\p@ \@minus\p@
+            \topsep 0\p@ \@plus2\p@ \@minus4\p@
+            \itemsep0\p@}
+\let\@listi\@listI
+\@listi
+\def\@listii {\leftmargin\leftmarginii
+              \labelwidth\leftmarginii
+              \advance\labelwidth-\labelsep
+              \topsep    0\p@ \@plus2\p@ \@minus\p@}
+\def\@listiii{\leftmargin\leftmarginiii
+              \labelwidth\leftmarginiii
+              \advance\labelwidth-\labelsep
+              \topsep    0\p@ \@plus\p@\@minus\p@
+              \parsep    \z@
+              \partopsep \p@ \@plus\z@ \@minus\p@}
+
+
+% sections
 \renewcommand\section{\@startsection{section}{1}{\z@}%
-  {-10pt \@plus -2pt \@minus -2pt}%
-  {4pt \@plus 1pt}%
-  {\normalfont\large\bfseries}}
+                       {-6\p@ \@plus -4\p@ \@minus -4\p@}%
+                       {0\p@ \@plus 4\p@ \@minus 4\p@}%
+                       {\normalfont\XIIIPT\bfseries\boldmath
+                        \rightskip=\z@ \@plus 8em\pretolerance=10000 }}
 
 \renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
-  {-8pt \@plus -1pt \@minus -1pt}%
-  {3pt \@plus 1pt}%
-  {\normalfont\normalsize\bfseries}}
+                       {-6\p@ \@plus -4\p@ \@minus -4\p@}%
+                       {0\p@ \@plus 4\p@ \@minus 4\p@}%
+                       {\normalfont\normalsize\bfseries\boldmath
+                        \rightskip=\z@ \@plus 8em\pretolerance=10000 }}
 
-\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
-  {-6pt \@plus -1pt \@minus -1pt}%
-  {2pt \@plus 1pt}%
-  {\normalfont\normalsize\itshape}}
+%\renewcommand{\thesection}{\arabic{section}.}
+%\renewcommand{\thesubsection}{\thesection\arabic{subsection}.}
+%\renewcommand{\thesubsubsection}{\thesubsection\arabic{subsubsection}.}
 
-%%----------------------------------------------------------------------
-%% Autores, instituição, e-mail
-%%----------------------------------------------------------------------
-\newcommand{\inst}[1]{\unskip$^{#1}$}
-\newcommand{\email}[1]{\texttt{#1}}
+\RequirePackage{titlesec}
+\titlelabel{\thetitle.\hspace{1ex}}
 
-\gdef\@address{}
-\newcommand{\address}[1]{\gdef\@address{#1}}
+% first page
 
-%%----------------------------------------------------------------------
-%% \maketitle — bloco do título spanning ambas colunas
-%%----------------------------------------------------------------------
-\renewcommand{\maketitle}{%
-  \twocolumn[%
-    \begin{@twocolumnfalse}%
-    \@maketitle
-    \end{@twocolumnfalse}%
-  ]%
-  \thispagestyle{empty}%
-  \pagestyle{empty}%
-  \setcounter{footnote}{0}%
+\pagestyle{empty}
+
+\newcommand{\authortag}[1]{$^{#1}$}
+
+\def\address#1{\gdef\@address{#1}}
+
+\def\@maketitle{\newpage
+ %\null % isso dava um espaco extra antes do title
+ \begin{center}
+   %\vglue -6pt
+%   \vspace*{12pt}
+\vspace*{-.7cm}
+  {\XVIPT\bf\@title\par}
+   \vglue 6pt plus 3pt minus 3pt
+  {\normalsize
+   \textbf{\begin{tabular}[t]{c}\@author\end{tabular}}\par}
+   \vglue 6pt plus 3pt minus 3pt
+  {\normalsize
+   \begin{tabular}[t]{c}\inst{\instnum}\@address\end{tabular}\par}
+   \vglue 6pt plus 3pt minus 3pt
+   \end{center}\par
 }
+\let\maketitleOLD\maketitle
+\renewcommand{\maketitle}{\maketitleOLD\thispagestyle{empty}}
 
-\newcommand{\@maketitle}{%
-  \begin{center}%
-    {\Large \bfseries \@title \par}%
-    \vskip 8pt%
-    {\normalsize \@author \par}%
-    \vskip 4pt%
-    {\small \@address \par}%
-  \end{center}%
-  \vskip 10pt%
-}
-
-%%----------------------------------------------------------------------
-%% abstract (inglês) e resumo (português) — uma coluna
-%%----------------------------------------------------------------------
 \renewenvironment{abstract}{%
-  \small
-  \noindent\textbf{Abstract.}\space\ignorespaces
-}{%
-  \par\vskip 4pt%
-}
+      \list{}{\advance\topsep by6pt\relax%\small
+      \leftmargin=0.8cm
+      \labelwidth=\z@
+      \listparindent=\z@
+      \itemindent\listparindent
+      \rightmargin\leftmargin}\item[\hskip\labelsep
+                                    \bfseries\itshape Abstract.]\itshape}%
+      {\endlist}
 
 \newenvironment{resumo}{%
-  \small
-  \noindent\textbf{Resumo.}\space\ignorespaces
-}{%
-  \par\vskip 4pt%
-}
-
-%%----------------------------------------------------------------------
-%% Captions — pequenas e compactas
-%%----------------------------------------------------------------------
-\long\def\@makecaption#1#2{%
-  \vskip\abovecaptionskip
-  \sbox\@tempboxa{\small\textbf{#1.} #2}%
-  \ifdim \wd\@tempboxa >\hsize
-    \small\textbf{#1.} #2\par
-  \else
-    \global \@minipagefalse
-    \hb@xt@\hsize{\hfil\box\@tempboxa\hfil}%
-  \fi
-  \vskip\belowcaptionskip}
-
-%%----------------------------------------------------------------------
-%% Bibliografia — fonte pequena
-%%----------------------------------------------------------------------
-\renewcommand{\@biblabel}[1]{[#1]}
-
-\renewenvironment{thebibliography}[1]{%
-  \section*{\refname}%
-  \small
-  \list{\@biblabel{\@arabic\c@enumiv}}{%
-    \settowidth\labelwidth{\@biblabel{#1}}%
-    \leftmargin\labelwidth
-    \advance\leftmargin\labelsep
-    \@openbib@code
-    \usecounter{enumiv}%
-    \let\p@enumiv\@empty
-    \renewcommand\theenumiv{\@arabic\c@enumiv}}%
-  \sloppy
-  \clubpenalty4000
-  \@clubpenalty \clubpenalty
-  \widowpenalty4000%
-  \sfcode`\.\@m}
-{\def\@noitemerr
-  {\@latex@warning{Empty `thebibliography' environment}}%
-  \endlist}
-
-\endinput
-%%
-%% Fim de sbc-template.sty
+      \list{}{\advance\topsep by6pt\relax%\small
+      \leftmargin=0.8cm
+      \labelwidth=\z@
+      \listparindent=\z@
+      \itemindent\listparindent
+      \rightmargin\leftmargin}\item[\hskip\labelsep
+                                    \bfseries\itshape Resumo.]\itshape}%
+      {\endlist}
