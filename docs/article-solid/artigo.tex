@@ -225,6 +225,28 @@ O \textit{hot path} de captura e pré-processamento de frame --- \texttt{VideoSo
 
 O detector, em sua forma atual, roda em laptop ou desktop, mas a aplicação ubíqua natural envolveria portar o sistema para hardware embarcado (\texttt{ESP32-CAM}, \texttt{Raspberry Pi Zero}). Defendemos uma postura de \textbf{aplicação parcial e por camada}: nas camadas superiores --- domínio, aplicação, portas --- SOLID se aplica plenamente, pois envolve poucos objetos, mudanças pouco frequentes em \textit{runtime} e ganho claro em testabilidade. Na camada de \textit{edge}, em contraste, SOLID se aplica apenas na \textbf{fronteira} (uma porta única para o caso de uso); internamente, o \textit{adapter} pode ser procedural, com \textit{buffers} pré-alocados e zero indireção, otimizado para o \textit{hardware} específico. Essa postura evita o dogmatismo de ``SOLID em tudo'' e respeita a realidade de que sistemas ubíquos têm camadas com perfis de recursos radicalmente diferentes.
 
-% --- Próxima seção ---
+\section{Considerações finais}
+
+A aplicação dos cinco princípios SOLID à arquitetura do detector de fadiga rendeu três efeitos práticos: a separação clara entre domínio e infraestrutura permitiu testar a lógica de decisão sem câmera; a abertura por portas (detector, validador, inferência, \textit{sinks}) habilita experimentar novos algoritmos, validadores e canais sem mexer no núcleo; e a documentação via ADRs preservou o histórico das decisões para futuros mantenedores. O contraste mais relevante apareceu na inferência de fadiga --- migrar de um limiar fixo para um motor fuzzy com 12 regras IF--THEN passou de cirurgia no \texttt{main} a uma simples troca de implementação por configuração.
+
+Reconhecemos, contudo, os limites desta abordagem: SOLID não substitui análise de \textit{performance} no \textit{hot path}, e o número adicional de classes e indireções tem custo real em legibilidade e em dispositivos com restrição severa. Como trabalhos futuros, consideramos a introdução de um \texttt{MLIndexEvaluator} treinado com dados reais, a expansão dos validadores de contexto para incluir iluminação e óculos escuros, e a portabilidade do \textit{adapter} de detecção para hardware embarcado, momento em que a postura discutida na Seção~6.3 será posta à prova.
+
+\section*{Referências}
+
+\noindent \textbf{ARAUJO, R. B.} Computação ubíqua: princípios, tecnologias e desafios. \textit{Anais do XXI Simpósio Brasileiro de Redes de Computadores}, 2003.
+
+\noindent \textbf{BASS, L.; CLEMENTS, P.; KAZMAN, R.} \textit{Software Architecture in Practice}. 4. ed. Boston: Addison-Wesley, 2021.
+
+\noindent \textbf{MARTIN, R. C.} \textit{Agile Software Development: Principles, Patterns, and Practices}. Upper Saddle River: Prentice Hall, 2002.
+
+\noindent \textbf{MARTIN, R. C.} \textit{Arquitetura Limpa: o guia do artesão para estrutura e design de software}. Rio de Janeiro: Alta Books, 2019.
+
+\noindent \textbf{NYGARD, M.} Documenting Architecture Decisions. 2011. Disponível em: \url{https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions}.
+
+\noindent \textbf{SATYANARAYANAN, M.} Pervasive computing: vision and challenges. \textit{IEEE Personal Communications}, v. 8, n. 4, p. 10--17, 2001.
+
+\noindent \textbf{SILVA, J. S.; TELES, L. E. S.; PENARIOL, L. F. H.} Detector de Fadiga: uma solução para monitoramento em tempo real. \textit{Anais do IFG --- Bacharelado em Engenharia de Software}, 2024.
+
+\noindent \textbf{WEISER, M.} The Computer for the 21st Century. \textit{Scientific American}, v. 265, n. 3, p. 94--104, 1991.
 
 \end{document}
