@@ -1,0 +1,187 @@
+%%
+%% This is file `sbc-template.sty',
+%% Produced for the Sociedade Brasileira de Computacao (SBC)
+%% Conferences & Publications template.
+%%
+%% Based on the official SBC LaTeX template distributed at:
+%%   http://www.sbc.org.br/documentos-da-sbc/category/169-templates-para-artigos-completos
+%%
+%% This style file defines the SBC conference paper format.
+%% Compatible with: \documentclass[12pt]{article}
+%%
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{sbc-template}[2023/01/01 SBC Template v3.0]
+
+%%----------------------------------------------------------------------
+%% Required packages
+%%----------------------------------------------------------------------
+\RequirePackage{times}
+\RequirePackage{graphicx}
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{url}
+\RequirePackage{color}
+
+%%----------------------------------------------------------------------
+%% Page geometry
+%%----------------------------------------------------------------------
+\setlength{\paperheight}{297mm}
+\setlength{\paperwidth}{210mm}
+
+\setlength{\textwidth}{160mm}
+\setlength{\textheight}{235mm}
+\setlength{\oddsidemargin}{0mm}
+\setlength{\evensidemargin}{0mm}
+\setlength{\topmargin}{-10mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\columnsep}{8mm}
+\setlength{\parindent}{5mm}
+\setlength{\parskip}{0pt}
+
+\setlength{\abovecaptionskip}{5pt}
+\setlength{\belowcaptionskip}{5pt}
+
+%%----------------------------------------------------------------------
+%% Section headings — bold, 12pt, centred for section; flush-left for sub
+%%----------------------------------------------------------------------
+\renewcommand\section{\@startsection{section}{1}{\z@}%
+  {-12pt \@plus -2pt \@minus -2pt}%
+  {6pt \@plus 2pt}%
+  {\normalfont\normalsize\bfseries\MakeUppercase}}
+
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+  {-10pt \@plus -1pt \@minus -1pt}%
+  {4pt \@plus 1pt}%
+  {\normalfont\normalsize\bfseries}}
+
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+  {-8pt \@plus -1pt \@minus -1pt}%
+  {2pt \@plus 1pt}%
+  {\normalfont\normalsize\itshape}}
+
+%%----------------------------------------------------------------------
+%% Title / author / address machinery
+%%----------------------------------------------------------------------
+
+% \inst{N} — superscript institution number
+\newcommand{\inst}[1]{\unskip$^{#1}$}
+
+% \email{addr} — formats e-mail inside \address
+\newcommand{\email}[1]{\texttt{#1}}
+
+% Internal storage
+\gdef\@address{}
+\newcommand{\address}[1]{\gdef\@address{#1}}
+
+%%----------------------------------------------------------------------
+%% \maketitle  — produces the SBC-formatted title block
+%%----------------------------------------------------------------------
+\renewcommand{\maketitle}{%
+  \begingroup
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}%
+    \@maketitle
+  \endgroup
+  \thispagestyle{empty}%
+  \pagestyle{empty}%
+  \setcounter{footnote}{0}%
+}
+
+\newcommand{\@maketitle}{%
+  \vspace*{-12mm}%
+  \begin{center}%
+    {\Large \bfseries \@title \par}%
+    \vskip 10pt%
+    {\large \@author \par}%
+    \vskip 6pt%
+    {\small \@address \par}%
+  \end{center}%
+  \vskip 12pt%
+}
+
+%%----------------------------------------------------------------------
+%% abstract environment (English)
+%%----------------------------------------------------------------------
+\renewenvironment{abstract}{%
+  \small
+  \begin{center}%
+    {\bfseries Abstract\vspace{-.5em}\vspace{\z@}}%
+  \end{center}%
+  \quotation
+}{%
+  \endquotation
+  \vskip 6pt%
+}
+
+%%----------------------------------------------------------------------
+%% resumo environment (Portuguese)
+%%----------------------------------------------------------------------
+\newenvironment{resumo}{%
+  \small
+  \begin{center}%
+    {\bfseries Resumo\vspace{-.5em}\vspace{\z@}}%
+  \end{center}%
+  \quotation
+}{%
+  \endquotation
+  \vskip 6pt%
+}
+
+%%----------------------------------------------------------------------
+%% keywords / palavras-chave helpers
+%%----------------------------------------------------------------------
+\newcommand{\keywords}[1]{%
+  \vskip 4pt%
+  \noindent\small\textbf{Keywords:} #1%
+  \vskip 6pt%
+}
+
+\newcommand{\palavraschave}[1]{%
+  \vskip 4pt%
+  \noindent\small\textbf{Palavras-chave:} #1%
+  \vskip 6pt%
+}
+
+%%----------------------------------------------------------------------
+%% Figure & table captions
+%%----------------------------------------------------------------------
+\long\def\@makecaption#1#2{%
+  \vskip\abovecaptionskip
+  \sbox\@tempboxa{\small\textbf{#1.} #2}%
+  \ifdim \wd\@tempboxa >\hsize
+    \small\textbf{#1.} #2\par
+  \else
+    \global \@minipagefalse
+    \hb@xt@\hsize{\hfil\box\@tempboxa\hfil}%
+  \fi
+  \vskip\belowcaptionskip}
+
+%%----------------------------------------------------------------------
+%% Bibliography style — numbered, small font
+%%----------------------------------------------------------------------
+\renewcommand{\@biblabel}[1]{[#1]}
+
+\renewenvironment{thebibliography}[1]{%
+  \section*{\refname}%
+  \small
+  \list{\@biblabel{\@arabic\c@enumiv}}{%
+    \settowidth\labelwidth{\@biblabel{#1}}%
+    \leftmargin\labelwidth
+    \advance\leftmargin\labelsep
+    \@openbib@code
+    \usecounter{enumiv}%
+    \let\p@enumiv\@empty
+    \renewcommand\theenumiv{\@arabic\c@enumiv}}%
+  \sloppy
+  \clubpenalty4000
+  \@clubpenalty \clubpenalty
+  \widowpenalty4000%
+  \sfcode`\.\@m}
+{\def\@noitemerr
+  {\@latex@warning{Empty `thebibliography' environment}}%
+  \endlist}
+
+\endinput
+%%
+%% End of file `sbc-template.sty'.
