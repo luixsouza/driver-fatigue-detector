@@ -1,0 +1,34 @@
+@startuml
+title SRP — Separação de responsabilidades em casos de uso
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName "Helvetica"
+
+class ProcessFrameUseCase {
+  +execute(frame): FrameMetrics
+}
+class VideoSource <<adapter>> {
+  +read(): Frame
+}
+class FaceLandmarkDetector <<adapter>> {
+  +detect(frame): Landmarks
+}
+class Evaluator <<domain>> {
+  +evaluate(metrics): FatigueDecision
+}
+class AlertSink <<adapter>> {
+  +publish(event): void
+}
+
+ProcessFrameUseCase --> VideoSource
+ProcessFrameUseCase --> FaceLandmarkDetector
+ProcessFrameUseCase --> Evaluator
+ProcessFrameUseCase --> AlertSink
+
+note right of ProcessFrameUseCase
+  Uma razão única para mudar:
+  orquestrar o ciclo de detecção.
+end note
+
+@enduml
