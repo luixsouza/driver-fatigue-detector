@@ -484,7 +484,7 @@ class _InProcessAlertSink:
     web server — economiza JSON encode/decode + round-trip HTTP loopback."""
 
     def __init__(self, evaluator=None) -> None:
-        from driver_fatigue.infrastructure.fatigue_inference.noop import NoOpIndexEvaluator
+        from driver_fatigue.infrastructure.index_evaluators.noop import NoOpIndexEvaluator
         self._evaluator = evaluator or NoOpIndexEvaluator()
 
     def notify(self, event) -> None:

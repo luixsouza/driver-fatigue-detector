@@ -199,12 +199,12 @@ def _build_index_evaluator(settings: AppSettings):
 
     Retorna NoOp se desabilitado ou se scikit-fuzzy nao estiver instalado.
     """
-    from driver_fatigue.infrastructure.fatigue_inference.noop import NoOpIndexEvaluator
+    from driver_fatigue.infrastructure.index_evaluators.noop import NoOpIndexEvaluator
 
     if not settings.fatigue_index.enabled:
         return NoOpIndexEvaluator()
     try:
-        from driver_fatigue.infrastructure.fatigue_inference.fuzzy import (
+        from driver_fatigue.infrastructure.index_evaluators.fuzzy import (
             FuzzyIndexEvaluator,
         )
         return FuzzyIndexEvaluator()

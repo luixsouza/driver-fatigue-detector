@@ -8,7 +8,7 @@ import pytest
 skfuzzy = pytest.importorskip("skfuzzy")
 
 from driver_fatigue.domain.fatigue_index import FatigueInputs
-from driver_fatigue.infrastructure.fatigue_inference.fuzzy import (
+from driver_fatigue.infrastructure.index_evaluators.fuzzy import (
     FuzzyIndexEvaluator,
 )
 

@@ -1,5 +1,5 @@
 from driver_fatigue.domain.fatigue_index import FatigueInputs
-from driver_fatigue.infrastructure.fatigue_inference.noop import NoOpIndexEvaluator
+from driver_fatigue.infrastructure.index_evaluators.noop import NoOpIndexEvaluator
 
 
 def test_noop_returns_zero_index():
