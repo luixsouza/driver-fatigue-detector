@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[10pt,a4paper,twocolumn]{article}
 
 \usepackage{placeins}
 \usepackage{amsmath}
@@ -61,22 +61,21 @@ Os princípios SOLID, popularizados por \textbf{Martin (2002, 2019)}, são heur�
 
 O detector de fadiga em sua forma evoluída expõe cinco camadas funcionais, ilustradas na Figura~\ref{fig:componentes-inicial}. A camada de \textit{aquisição} encapsula fontes de vídeo heterogêneas (webcam local, arquivo de vídeo, fluxo RTSP). A camada de \textit{comunicação} expõe um endpoint REST autenticado por chave de API que permite empurrar frames de fontes remotas. A camada de \textit{processamento e regras de negócio} concentra os casos de uso e o domínio (cálculos de EAR/MAR e índice de fadiga). A camada de \textit{armazenamento} persiste eventos em formato JSONL, mantém configuração em YAML e produz logs estruturados. A camada de \textit{apresentação e atuação} reúne uma interface web em React/Tailwind e múltiplos canais de alerta.
 
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
     \centering
-    \includegraphics[width=0.95\columnwidth]{diagrams/png/01-componentes-inicial.png}
+    \includegraphics[width=0.85\textwidth]{diagrams/png/01-componentes-inicial.png}
     \caption{Arquitetura inicial em cinco camadas.}
     \label{fig:componentes-inicial}
-\end{figure}
-\FloatBarrier
+\end{figure*}
 
 A partir desse mapa, identificamos cinco pontos arquiteturais sensíveis: regiões em que a evolução natural do sistema tende a violar princípios SOLID se nenhuma decisão explícita for tomada. A Tabela~\ref{tab:pontos-sensiveis} apresenta esses pontos, o princípio em risco em cada caso, o sintoma esperado e a característica ubíqua envolvida. Cada ponto é tratado em uma subseção da Seção~4.
 
-\begin{table}[htbp]
+\begin{table*}[htbp]
 \centering
 \caption{Pontos arquiteturais sensíveis identificados.}
 \label{tab:pontos-sensiveis}
 \small
-\begin{tabular}{p{3.3cm}lp{4.6cm}p{3.1cm}}
+\begin{tabular}{p{3.8cm}lp{5.8cm}p{3.8cm}}
 \toprule
 \textbf{Ponto sensível} & \textbf{Princípio} & \textbf{Sintoma esperado} & \textbf{Característica ubíqua} \\
 \midrule
@@ -87,7 +86,7 @@ Interface ``alerta'' inflada & ISP & Canais silenciosos forçados a implementar 
 Motor de inferência acoplado & DIP & Substituir limiar por fuzzy/ML exige cirurgia no núcleo & Mobilidade computacional \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \section{Aplicação dos princípios SOLID}
 
@@ -101,7 +100,7 @@ Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detec
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\columnwidth]{diagrams/png/02-srp-use-cases.png}
+    \includegraphics[width=\columnwidth]{diagrams/png/02-srp-use-cases.png}
     \caption{SRP: separação em casos de uso.}
     \label{fig:srp}
 \end{figure}
@@ -117,7 +116,7 @@ Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detec
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\columnwidth]{diagrams/png/03-ocp-detector.png}
+    \includegraphics[width=\columnwidth]{diagrams/png/03-ocp-detector.png}
     \caption{OCP: detector facial como porta plugável.}
     \label{fig:ocp}
 \end{figure}
@@ -133,7 +132,7 @@ Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detec
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\columnwidth]{diagrams/png/04-lsp-validators.png}
+    \includegraphics[width=\columnwidth]{diagrams/png/04-lsp-validators.png}
     \caption{LSP: validadores com contrato uniforme.}
     \label{fig:lsp}
 \end{figure}
@@ -149,7 +148,7 @@ Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detec
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\columnwidth]{diagrams/png/05-isp-alert-sinks.png}
+    \includegraphics[width=\columnwidth]{diagrams/png/05-isp-alert-sinks.png}
     \caption{ISP: \texttt{AlertSink} minimal com Composite.}
     \label{fig:isp}
 \end{figure}
@@ -165,7 +164,7 @@ Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detec
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\columnwidth]{diagrams/png/06-dip-index-evaluator.png}
+    \includegraphics[width=\columnwidth]{diagrams/png/06-dip-index-evaluator.png}
     \caption{DIP: inferência via Strategy.}
     \label{fig:dip}
 \end{figure}
@@ -177,22 +176,21 @@ Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detec
 
 A Figura~\ref{fig:consolidada} apresenta o desenho integrado após aplicação dos cinco princípios. As cinco portas (\texttt{FaceLandmarkDetector}, \texttt{VideoSource}, \texttt{ContextValidator}, \texttt{IndexEvaluator}, \texttt{AlertSink}) ficam expostas pela camada de aplicação, demarcadas com estereótipos «DIP», «OCP», «LSP» e «ISP» conforme o princípio dominante em cada uma. Os \textit{adapters} concretos vivem em \texttt{infrastructure/}, e a camada de domínio permanece livre de qualquer detalhe técnico.
 
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
     \centering
-    \includegraphics[width=\columnwidth]{diagrams/png/07-arquitetura-consolidada.png}
+    \includegraphics[width=0.9\textwidth]{diagrams/png/07-arquitetura-consolidada.png}
     \caption{Arquitetura consolidada com pontos de extensão marcados.}
     \label{fig:consolidada}
-\end{figure}
-\FloatBarrier
+\end{figure*}
 
 A Tabela~\ref{tab:adrs} sintetiza três Architecture Decision Records que registram as decisões arquiteturais mais importantes consolidadas neste desenho, no formato \textbf{Nygard (2011)}.
 
-\begin{table}[htbp]
+\begin{table*}[htbp]
 \centering
 \caption{ADRs consolidados.}
 \label{tab:adrs}
 \small
-\begin{tabular}{p{0.9cm}p{6.6cm}p{4.8cm}}
+\begin{tabular}{p{1.4cm}p{8.5cm}p{5.6cm}}
 \toprule
 \textbf{ADR} & \textbf{Decisão e contexto} & \textbf{Consequências} \\
 \midrule
@@ -209,7 +207,7 @@ $+$ \textit{toggle} por config; $+$ caminho aberto para \texttt{MLIndexEvaluator
 $+$ adicionar/remover canal sem mexer no núcleo; $+$ falha isolada por \textit{sink}. $-$ muitos arquivos pequenos; $-$ política de falha parcial a definir. \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \section{Discussão}
 

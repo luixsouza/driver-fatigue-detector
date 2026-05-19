@@ -1,21 +1,12 @@
 %%
-%% This is file `sbc-template.sty',
-%% Produced for the Sociedade Brasileira de Computacao (SBC)
-%% Conferences & Publications template.
-%%
-%% Based on the official SBC LaTeX template distributed at:
-%%   http://www.sbc.org.br/documentos-da-sbc/category/169-templates-para-artigos-completos
-%%
-%% This style file defines the SBC conference paper format.
-%% Compatible with: \documentclass[12pt]{article}
+%% sbc-template.sty
+%% Estilo SBC duas colunas, 10pt, A4
+%% Compatível com: \documentclass[10pt,a4paper,twocolumn]{article}
 %%
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{sbc-template}[2023/01/01 SBC Template v3.0]
+\ProvidesPackage{sbc-template}[2026/05/19 SBC Template v4.0 two-column]
 
-%%----------------------------------------------------------------------
-%% Required packages
-%%----------------------------------------------------------------------
 \RequirePackage{times}
 \RequirePackage{graphicx}
 \RequirePackage{amsmath}
@@ -24,127 +15,96 @@
 \RequirePackage{color}
 
 %%----------------------------------------------------------------------
-%% Page geometry
+%% Geometria A4 — margens 25mm (texto 160 x 247 mm)
 %%----------------------------------------------------------------------
 \setlength{\paperheight}{297mm}
 \setlength{\paperwidth}{210mm}
 
 \setlength{\textwidth}{160mm}
-\setlength{\textheight}{235mm}
-\setlength{\oddsidemargin}{0mm}
-\setlength{\evensidemargin}{0mm}
-\setlength{\topmargin}{-10mm}
+\setlength{\textheight}{247mm}
+\setlength{\oddsidemargin}{-1mm}   % 25mm - 1in = -1mm
+\setlength{\evensidemargin}{-1mm}
+\setlength{\topmargin}{-26mm}      % 25mm - 1in
 \setlength{\headheight}{0mm}
 \setlength{\headsep}{0mm}
-\setlength{\columnsep}{8mm}
-\setlength{\parindent}{5mm}
-\setlength{\parskip}{0pt}
+\setlength{\columnsep}{6mm}
+\setlength{\parindent}{4mm}
+\setlength{\parskip}{2pt}
 
-\setlength{\abovecaptionskip}{5pt}
-\setlength{\belowcaptionskip}{5pt}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{3pt}
 
 %%----------------------------------------------------------------------
-%% Section headings — bold, 12pt, centred for section; flush-left for sub
+%% Section headings — bold, compactos
 %%----------------------------------------------------------------------
 \renewcommand\section{\@startsection{section}{1}{\z@}%
-  {-12pt \@plus -2pt \@minus -2pt}%
-  {6pt \@plus 2pt}%
-  {\normalfont\normalsize\bfseries\MakeUppercase}}
+  {-10pt \@plus -2pt \@minus -2pt}%
+  {4pt \@plus 1pt}%
+  {\normalfont\large\bfseries}}
 
 \renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
-  {-10pt \@plus -1pt \@minus -1pt}%
-  {4pt \@plus 1pt}%
+  {-8pt \@plus -1pt \@minus -1pt}%
+  {3pt \@plus 1pt}%
   {\normalfont\normalsize\bfseries}}
 
 \renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
-  {-8pt \@plus -1pt \@minus -1pt}%
+  {-6pt \@plus -1pt \@minus -1pt}%
   {2pt \@plus 1pt}%
   {\normalfont\normalsize\itshape}}
 
 %%----------------------------------------------------------------------
-%% Title / author / address machinery
+%% Autores, instituição, e-mail
 %%----------------------------------------------------------------------
-
-% \inst{N} — superscript institution number
 \newcommand{\inst}[1]{\unskip$^{#1}$}
-
-% \email{addr} — formats e-mail inside \address
 \newcommand{\email}[1]{\texttt{#1}}
 
-% Internal storage
 \gdef\@address{}
 \newcommand{\address}[1]{\gdef\@address{#1}}
 
 %%----------------------------------------------------------------------
-%% \maketitle  — produces the SBC-formatted title block
+%% \maketitle — bloco do título spanning ambas colunas
 %%----------------------------------------------------------------------
 \renewcommand{\maketitle}{%
-  \begingroup
-    \renewcommand{\thefootnote}{\fnsymbol{footnote}}%
+  \twocolumn[%
+    \begin{@twocolumnfalse}%
     \@maketitle
-  \endgroup
+    \end{@twocolumnfalse}%
+  ]%
   \thispagestyle{empty}%
   \pagestyle{empty}%
   \setcounter{footnote}{0}%
 }
 
 \newcommand{\@maketitle}{%
-  \vspace*{-12mm}%
   \begin{center}%
     {\Large \bfseries \@title \par}%
-    \vskip 10pt%
-    {\large \@author \par}%
-    \vskip 6pt%
+    \vskip 8pt%
+    {\normalsize \@author \par}%
+    \vskip 4pt%
     {\small \@address \par}%
   \end{center}%
-  \vskip 12pt%
+  \vskip 10pt%
 }
 
 %%----------------------------------------------------------------------
-%% abstract environment (English)
+%% abstract (inglês) e resumo (português) — uma coluna
 %%----------------------------------------------------------------------
 \renewenvironment{abstract}{%
   \small
-  \begin{center}%
-    {\bfseries Abstract\vspace{-.5em}\vspace{\z@}}%
-  \end{center}%
-  \quotation
+  \noindent\textbf{Abstract.}\space\ignorespaces
 }{%
-  \endquotation
-  \vskip 6pt%
+  \par\vskip 4pt%
 }
 
-%%----------------------------------------------------------------------
-%% resumo environment (Portuguese)
-%%----------------------------------------------------------------------
 \newenvironment{resumo}{%
   \small
-  \begin{center}%
-    {\bfseries Resumo\vspace{-.5em}\vspace{\z@}}%
-  \end{center}%
-  \quotation
+  \noindent\textbf{Resumo.}\space\ignorespaces
 }{%
-  \endquotation
-  \vskip 6pt%
+  \par\vskip 4pt%
 }
 
 %%----------------------------------------------------------------------
-%% keywords / palavras-chave helpers
-%%----------------------------------------------------------------------
-\newcommand{\keywords}[1]{%
-  \vskip 4pt%
-  \noindent\small\textbf{Keywords:} #1%
-  \vskip 6pt%
-}
-
-\newcommand{\palavraschave}[1]{%
-  \vskip 4pt%
-  \noindent\small\textbf{Palavras-chave:} #1%
-  \vskip 6pt%
-}
-
-%%----------------------------------------------------------------------
-%% Figure & table captions
+%% Captions — pequenas e compactas
 %%----------------------------------------------------------------------
 \long\def\@makecaption#1#2{%
   \vskip\abovecaptionskip
@@ -158,7 +118,7 @@
   \vskip\belowcaptionskip}
 
 %%----------------------------------------------------------------------
-%% Bibliography style — numbered, small font
+%% Bibliografia — fonte pequena
 %%----------------------------------------------------------------------
 \renewcommand{\@biblabel}[1]{[#1]}
 
@@ -184,4 +144,4 @@
 
 \endinput
 %%
-%% End of file `sbc-template.sty'.
+%% Fim de sbc-template.sty
