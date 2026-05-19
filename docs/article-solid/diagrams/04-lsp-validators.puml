@@ -1,0 +1,35 @@
+@startuml
+title LSP — Validadores de contexto com contrato uniforme
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName "Helvetica"
+
+abstract class ContextValidator {
+  +validate(ctx): ValidationResult
+}
+
+class ImageQualityValidator
+class HeadPoseValidator
+class OcclusionValidator
+class LightingValidator <<proposto>>
+
+class ValidationResult {
+  +ok: bool
+  +reason: str?
+}
+
+ContextValidator <|-- ImageQualityValidator
+ContextValidator <|-- HeadPoseValidator
+ContextValidator <|-- OcclusionValidator
+ContextValidator <|-- LightingValidator
+
+ContextValidator ..> ValidationResult
+
+note bottom of ContextValidator
+  Toda subclasse honra o contrato:
+  retorna ValidationResult, nunca
+  lança exceção inesperada.
+end note
+
+@enduml
