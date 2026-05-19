@@ -76,8 +76,23 @@ def evaluate_fatigue(
     timestamp: float | None = None,
 ) -> FatigueState:
     q = quality if quality is not None else FrameQuality.trusted()
+    baseline = previous.baseline
+    calibrated = (
+        calibration.enabled
+        and baseline.is_calibrated(calibration.warmup_frames)
+    )
+    # Cabeceio só é avaliado depois da calibração — o estimador de pitch tem
+    # viés não-zero pra rostos frontais (olhos acima do centro do oval), então
+    # threshold absoluto dispara trivialmente. Pós-warmup, compara contra o
+    # pitch de repouso aprendido por usuário.
+    if calibrated:
+        pitch_drop = (
+            abs(q.head_pitch_deg - baseline.pitch_rest)
+            >= thresholds.head_drop_pitch_deg
+        )
+    else:
+        pitch_drop = False
     # Frame ruim por pitch alto NÃO é descartado — é evidência de cabeça caindo.
-    pitch_drop = abs(q.head_pitch_deg) >= thresholds.head_drop_pitch_deg
     if not q.trustworthy and not pitch_drop:
         return _replace(previous, quality=q)
 
@@ -86,9 +101,8 @@ def evaluate_fatigue(
     ear = (left_ear + right_ear) / 2.0
     mar = mouth_aspect_ratio(landmarks.mouth_outer)
 
-    baseline = previous.baseline
     if calibration.enabled and not baseline.is_calibrated(calibration.warmup_frames):
-        baseline = baseline.absorb(ear, mar)
+        baseline = baseline.absorb(ear, mar, q.head_pitch_deg)
         return FatigueState(
             ear=ear, mar=mar,
             consecutive_frames=0,
@@ -161,7 +175,7 @@ def evaluate_fatigue(
         and not triggered
         and baseline.is_calibrated(calibration.warmup_frames)
     ):
-        baseline = baseline.absorb(ear, mar)
+        baseline = baseline.absorb(ear, mar, q.head_pitch_deg)
 
     return FatigueState(
         ear=ear,

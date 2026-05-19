@@ -67,6 +67,11 @@ class PersonalBaseline:
     mar_rest: float = 0.0
     ear_std: float = 0.0
     mar_std: float = 0.0
+    # Pitch de repouso da pessoa (geometria do rosto, postura natural).
+    # `estimate_pitch_deg` tem viés não-zero pra rostos frontais (olhos ficam
+    # acima do centro do face_oval), então threshold de cabeceio precisa ser
+    # relativo a esse baseline pra não disparar com cara reta.
+    pitch_rest: float = 0.0
     sample_count: int = 0
 
     @classmethod
@@ -76,11 +81,12 @@ class PersonalBaseline:
     def is_calibrated(self, warmup_frames: int) -> bool:
         return self.sample_count >= max(warmup_frames, 1)
 
-    def absorb(self, ear: float, mar: float) -> "PersonalBaseline":
+    def absorb(self, ear: float, mar: float, pitch_deg: float = 0.0) -> "PersonalBaseline":
         """Atualiza médias e desvios via algoritmo de Welford (online)."""
         n = self.sample_count + 1
         ear_mean = self.ear_rest + (ear - self.ear_rest) / n
         mar_mean = self.mar_rest + (mar - self.mar_rest) / n
+        pitch_mean = self.pitch_rest + (pitch_deg - self.pitch_rest) / n
         if n > 1:
             ear_var = ((n - 2) * self.ear_std**2
                        + (ear - self.ear_rest) * (ear - ear_mean)) / (n - 1)
@@ -96,6 +102,7 @@ class PersonalBaseline:
             mar_rest=mar_mean,
             ear_std=ear_std,
             mar_std=mar_std,
+            pitch_rest=pitch_mean,
             sample_count=n,
         )
 
