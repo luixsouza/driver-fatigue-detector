@@ -84,6 +84,17 @@ class MonitorDriverUseCase:
             ):
                 _log.info("ctx_suppressed: alarme inibido por context validator")
                 return
+            # Log estruturado: ajuda diagnosticar por que cada alarme disparou.
+            # Tags ear/mar/yawning/pitch_drop dão a pista do gatilho dominante.
+            _log.info(
+                "alert_fired frame=%d ear=%.3f mar=%.3f consec=%d yawning=%s pitch=%.1f",
+                frame.index if frame is not None else 0,
+                current.ear,
+                current.mar,
+                current.consecutive_frames,
+                current.is_yawning,
+                current.quality.head_pitch_deg if current.quality else 0.0,
+            )
             self._sink.notify(FatigueEvent(
                 timestamp=frame.timestamp if frame is not None else float(current.consecutive_frames),
                 state=current,

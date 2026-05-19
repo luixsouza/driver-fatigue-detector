@@ -64,6 +64,34 @@ _INPUT_RANGES: dict[str, tuple[float, float]] = {
     "hour_of_day": (0.0, 23.99),
 }
 
+# Thresholds de detecção live-mutáveis pelo /api/inputs. São distintos de
+# _simulated_inputs porque modificam a regra de decisão real (EAR/MAR/pitch),
+# não só a camada secundária do FatigueIndex.
+_thresholds_lock = threading.Lock()
+_runtime_thresholds: dict[str, float] = {
+    "ear_threshold": 0.19,
+    "mar_threshold": 0.65,
+    "consecutive_frames": 22.0,
+    "head_drop_pitch_deg": 22.0,
+}
+_THRESHOLD_RANGES: dict[str, tuple[float, float]] = {
+    "ear_threshold": (0.10, 0.35),
+    "mar_threshold": (0.30, 0.90),
+    "consecutive_frames": (5.0, 60.0),
+    "head_drop_pitch_deg": (10.0, 45.0),
+}
+# Campos inteiros — recebidos como float mas convertidos antes de aplicar.
+_THRESHOLD_INT_FIELDS: set[str] = {"consecutive_frames"}
+
+# Referência ao DetectFatigueUseCase ativo, setada pelo _EmbeddedDetector
+# após cada respawn. None até o detector subir.
+_active_detect_uc = None
+# True quando o usuário (ou demo) tocou em algum threshold. Na primeira
+# subida do detector, se _thresholds_dirty=False, sincronizamos o snapshot
+# do server a partir do YAML do detector (em vez de sobrescrever o YAML
+# com os defaults hardcoded acima).
+_thresholds_dirty = False
+
 
 def _get_simulated_snapshot() -> dict[str, float]:
     with _simulated_lock:
@@ -81,6 +109,42 @@ def _update_simulated(updates: dict) -> None:
                     continue
                 lo, hi = lo_hi
                 _simulated_inputs[key] = max(lo, min(hi, val))
+
+
+def _get_thresholds_snapshot() -> dict[str, float]:
+    with _thresholds_lock:
+        return dict(_runtime_thresholds)
+
+
+def _update_thresholds(updates: dict) -> dict[str, float]:
+    """Atualiza thresholds runtime + propaga pro detector ativo se houver.
+    Retorna snapshot dos thresholds após o update."""
+    applied: dict[str, float] = {}
+    global _thresholds_dirty
+    with _thresholds_lock:
+        for key, lo_hi in _THRESHOLD_RANGES.items():
+            if key in updates:
+                val = updates[key]
+                try:
+                    val = float(val)
+                except (TypeError, ValueError):
+                    continue
+                lo, hi = lo_hi
+                clamped = max(lo, min(hi, val))
+                if key in _THRESHOLD_INT_FIELDS:
+                    clamped = int(round(clamped))
+                _runtime_thresholds[key] = clamped
+                applied[key] = clamped
+        if applied:
+            _thresholds_dirty = True
+        snapshot = dict(_runtime_thresholds)
+    # Propaga ao use case ativo fora do lock pra evitar contenção.
+    if applied and _active_detect_uc is not None:
+        try:
+            _active_detect_uc.update_thresholds(**applied)
+        except Exception as exc:
+            _log.warning("falha aplicando thresholds ao detector: %s", exc)
+    return snapshot
 
 
 # Cenario scriptado pra demonstracao. Anda em 10Hz interpolando entre
@@ -231,7 +295,11 @@ class _Handler(BaseHTTPRequestHandler):
             self._serve_mjpeg()
             return
         if path == "/api/inputs":
-            self._json(200, _get_simulated_snapshot())
+            payload = {
+                **_get_simulated_snapshot(),
+                **_get_thresholds_snapshot(),
+            }
+            self._json(200, payload)
             return
         if path == "/api/health" or path == "/health":
             now = time.monotonic()
@@ -319,6 +387,7 @@ class _Handler(BaseHTTPRequestHandler):
                 self.send_error(400, "expected json object")
                 return
             _update_simulated(payload)
+            _update_thresholds(payload)
             self._json(202, {"status": "accepted"})
             return
         if self.path == "/api/demo/start":
@@ -651,7 +720,26 @@ class _EmbeddedDetectorRunner:
             sink_override=sink,
             presenter_override=self._presenter,
         )
-        uc.run()
+        # Registra o DetectFatigueUseCase ativo pra /api/inputs mexer
+        # ear_threshold/mar_threshold/etc em runtime.
+        global _active_detect_uc
+        _active_detect_uc = uc._detect
+        if _thresholds_dirty:
+            # Usuário já mexeu sliders — aplica o snapshot da UI no detector.
+            _active_detect_uc.update_thresholds(**_get_thresholds_snapshot())
+        else:
+            # Primeira subida — sincroniza snapshot do server a partir do
+            # YAML do detector pra UI refletir a verdade.
+            t = _active_detect_uc.thresholds
+            with _thresholds_lock:
+                _runtime_thresholds["ear_threshold"] = t.ear_threshold
+                _runtime_thresholds["mar_threshold"] = t.mar_threshold
+                _runtime_thresholds["consecutive_frames"] = float(t.consecutive_frames)
+                _runtime_thresholds["head_drop_pitch_deg"] = t.head_drop_pitch_deg
+        try:
+            uc.run()
+        finally:
+            _active_detect_uc = None
 
     def _loop(self) -> None:
         backoff = 2.0

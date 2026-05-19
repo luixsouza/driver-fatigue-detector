@@ -1,26 +1,51 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const INITIAL = {
+// Inputs simulados (alimentam fatigue_index secundário).
+const INITIAL_SIM = {
   bpm: 75,
   steering_noise: 0.1,
   hours_driving: 0,
   hour_of_day: new Date().getHours(),
 };
 
+// Thresholds reais (afetam o severity/alarme principal).
+// Valores iniciais são placeholders — o servidor manda os reais via GET /api/inputs.
+const INITIAL_THRESHOLDS = {
+  ear_threshold: 0.19,
+  mar_threshold: 0.65,
+  consecutive_frames: 22,
+  head_drop_pitch_deg: 22,
+};
+
 const DEBOUNCE_MS = 100;
 const DEMO_POLL_MS = 500;
 
 /**
- * Gerencia o estado dos sliders e sincroniza com /api/inputs (POST debounced).
- * Quando demoState === "running", faz polling GET /api/inputs e atualiza inputs
- * com o que o servidor diz (script do servidor sobrescreve).
+ * Gerencia sim inputs + thresholds reais, sincroniza com /api/inputs.
+ * Bootstrap: na montagem faz GET pra pegar valores reais do detector.
+ * Durante demo: faz polling 2Hz e sobrescreve sim inputs com o que o servidor diz.
  */
 export function useSimulatedInputs() {
-  const [inputs, setInputs] = useState(INITIAL);
+  const [inputs, setInputs] = useState({ ...INITIAL_SIM, ...INITIAL_THRESHOLDS });
   const [demoState, setDemoState] = useState("idle"); // idle | running
 
   const debounceRef = useRef(null);
   const pollRef = useRef(null);
+
+  // Bootstrap: na primeira render busca o estado atual do servidor
+  // (thresholds vêm do YAML, sim inputs vêm do servidor).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/inputs")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) {
+          setInputs((prev) => ({ ...prev, ...data }));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const setInputsLocal = useCallback((updater) => {
     setInputs((prev) => {
@@ -66,7 +91,7 @@ export function useSimulatedInputs() {
         const r = await fetch("/api/inputs");
         if (r.ok) {
           const data = await r.json();
-          setInputs(data);
+          setInputs((prev) => ({ ...prev, ...data }));
         }
       } catch {}
     }, DEMO_POLL_MS);

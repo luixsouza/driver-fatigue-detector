@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import dataclasses
+import threading
+
 from driver_fatigue.application.ports import FaceDetectorPort
 from driver_fatigue.domain.entities import (
     FaceLandmarks,
@@ -28,6 +31,25 @@ class DetectFatigueUseCase:
         self._thresholds = thresholds
         self._calibration = calibration or CalibrationSettings(enabled=False)
         self._quality_policy = quality_policy or FrameQualityPolicy()
+        # Thresholds podem ser ajustados em runtime pela UI (sliders).
+        # Lock protege contra leitura durante reconfiguração.
+        self._thresholds_lock = threading.Lock()
+
+    @property
+    def thresholds(self) -> FatigueThresholds:
+        with self._thresholds_lock:
+            return self._thresholds
+
+    def update_thresholds(self, **fields) -> FatigueThresholds:
+        """Substitui thresholds em runtime. Aceita subset dos campos de
+        FatigueThresholds; ignora keys desconhecidas. Retorna o estado final."""
+        valid = {f.name for f in dataclasses.fields(FatigueThresholds)}
+        filtered = {k: v for k, v in fields.items() if k in valid and v is not None}
+        if not filtered:
+            return self._thresholds
+        with self._thresholds_lock:
+            self._thresholds = dataclasses.replace(self._thresholds, **filtered)
+            return self._thresholds
 
     def execute(
         self,
@@ -44,9 +66,11 @@ class DetectFatigueUseCase:
             frame_height=h,
             policy=self._quality_policy,
         )
+        with self._thresholds_lock:
+            current_thresholds = self._thresholds
         new_state = evaluate_fatigue(
             faces[0],
-            self._thresholds,
+            current_thresholds,
             previous,
             calibration=self._calibration,
             quality=quality,

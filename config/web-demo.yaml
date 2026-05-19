@@ -1,27 +1,48 @@
 # Config pro modo `driver-fatigue web` — discrimina piscada de sonolência,
 # detecta cabeceio de motorista, stream HD a 30fps.
+#
+# Os 4 thresholds principais (ear_threshold, mar_threshold,
+# consecutive_frames, head_drop_pitch_deg) podem ser ajustados ao vivo
+# pelos sliders do dashboard.
 
 source:
   kind: webcam
   index: 0
 
 thresholds:
-  ear_threshold: 0.19
+  # Olho considerado "fechado" abaixo deste EAR. Pessoa normal tem EAR ~0.30
+  # em repouso. 0.21 = olhos bem fechados. Pode parecer alto, mas o
+  # calibration.ear_close_ratio ajusta esse valor pra cada usuário.
+  ear_threshold: 0.21
+
+  # Boca considerada "bocejando" acima deste MAR. 0.65 cobre bocejos amplos.
   mar_threshold: 0.65
-  consecutive_frames: 22        # ~0.75s @ 30fps
-  warning_ratio: 0.55
+
+  # Quantos frames consecutivos com olho fechado disparam alerta.
+  # 22 frames @ 30fps = ~0.75s. Piscar normal dura 100-400ms (3-12 frames),
+  # então 22 é seguro pra evitar falso positivo de piscada longa.
+  consecutive_frames: 22
+
+  # Warning aparece a 70% do limite acima (~15 frames, ~0.5s). Reduz
+  # avisos espúrios sem perder a oportunidade de pré-alertar.
+  warning_ratio: 0.70
+
   recovery_frames: 6
   min_alert_duration_frames: 5
   alarm_cooldown_seconds: 5.0
+
   yawn_window_frames: 25
   yawn_stability_max: 0.05
-  head_drop_pitch_deg: 22.0     # cabeça caindo a partir de 22°
+
+  # Cabeceio: diferença de pitch em relação ao repouso pessoal aprendido
+  # na calibração. 22° é cabeça nitidamente caída.
+  head_drop_pitch_deg: 22.0
   head_drop_frames_threshold: 25
 
 calibration:
   enabled: true
-  warmup_frames: 45
-  ear_close_ratio: 0.55         # 55% do EAR base = olho fechado (mais permissivo)
+  warmup_frames: 45            # ~1.5s antes do detector começar a julgar
+  ear_close_ratio: 0.55        # olho fechado = 55% do EAR aprendido (relativo)
   mar_open_zscore: 3.0
 
 frame_quality:
@@ -29,7 +50,7 @@ frame_quality:
   min_face_confidence: 0.4
   min_face_area_ratio: 0.02
   max_head_yaw_deg: 50.0
-  max_head_pitch_deg: 40.0      # acima disso o evaluator usa como evidência
+  max_head_pitch_deg: 40.0     # acima disso evaluator interpreta como cabeceio
 
 theme:
   glow_enabled: false
