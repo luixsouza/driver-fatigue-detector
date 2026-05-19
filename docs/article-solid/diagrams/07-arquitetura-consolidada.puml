@@ -1,54 +1,56 @@
 @startuml
-title Arquitetura consolidada — SOLID aplicado
-
-skinparam componentStyle rectangle
+!theme plain
 skinparam shadowing false
+skinparam roundCorner 6
 skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 11
+skinparam ArrowColor #555555
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam ComponentBorderColor #333333
+skinparam InterfaceBackgroundColor #FFFFFF
+skinparam InterfaceBorderColor #1E5DB8
+skinparam PackageBackgroundColor #F5F5F5
+skinparam PackageBorderColor #888888
+hide circle
 
 package "Interfaces" {
-  [Web Cockpit] as WEB
-  [CLI] as CLI
+  [Web Cockpit]
+  [CLI]
 }
 
-package "Application (use cases + ports)" {
-  [ProcessFrameUseCase] as UC1
-  [EvaluateFatigueUseCase] as UC2
-  [ValidatePreconditionsUseCase] as UC3
-  interface "FaceLandmarkDetector\n«DIP»«OCP»" as PD
-  interface "VideoSource\n«DIP»«OCP»" as PV
-  interface "ContextValidator\n«DIP»«LSP»" as PC
-  interface "IndexEvaluator\n«DIP»«OCP»" as PI
-  interface "AlertSink\n«DIP»«ISP»" as PA
+package "Application" {
+  [Use Cases]
+  interface "VideoSource" as PV
+  interface "FaceLandmarkDetector" as PD
+  interface "ContextValidator" as PC
+  interface "IndexEvaluator" as PI
+  interface "AlertSink" as PA
 }
 
 package "Domain" {
-  [Entities / Value Objects] as DOM
-  [EAR / MAR / FatigueIndex] as METR
+  [Entities + EAR/MAR/Index]
 }
 
-package "Infrastructure (adapters)" {
-  [MediaPipeDetector] as ADET
-  [WebcamSource / FileSource / RtspSource] as AVS
-  [ImageQualityValidator\nHeadPoseValidator\nOcclusionValidator] as AVAL
-  [FuzzyIndexEvaluator / NoOpIndexEvaluator] as AIE
-  [LogSink / JsonlSink / MqttSink\nHttpWebhookSink / SoundSink\nCompositeAlertSink] as ASINK
+package "Infrastructure" {
+  [Video adapters]
+  [Detector adapters]
+  [Validator adapters]
+  [Inference adapters]
+  [Sink adapters]
 }
 
-WEB --> UC1
-CLI --> UC1
-UC1 --> PV
-UC1 --> PD
-UC1 --> PC
-UC1 --> PA
-UC2 --> PI
-UC1 --> DOM
-UC2 --> DOM
-UC2 --> METR
+[Web Cockpit] --> [Use Cases]
+[CLI] --> [Use Cases]
+[Use Cases] --> PV
+[Use Cases] --> PD
+[Use Cases] --> PC
+[Use Cases] --> PI
+[Use Cases] --> PA
+[Use Cases] --> [Entities + EAR/MAR/Index]
 
-PD <|.. ADET
-PV <|.. AVS
-PC <|.. AVAL
-PI <|.. AIE
-PA <|.. ASINK
-
+PV <|.. [Video adapters]
+PD <|.. [Detector adapters]
+PC <|.. [Validator adapters]
+PI <|.. [Inference adapters]
+PA <|.. [Sink adapters]
 @enduml

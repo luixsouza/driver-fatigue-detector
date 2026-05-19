@@ -1,34 +1,23 @@
 @startuml
-title SRP — Separação de responsabilidades em casos de uso
-
-skinparam classAttributeIconSize 0
+!theme plain
 skinparam shadowing false
+skinparam roundCorner 6
 skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 11
+skinparam ArrowColor #555555
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #333333
+hide circle
+hide empty members
 
-class ProcessFrameUseCase {
-  +execute(frame): FrameMetrics
-}
-class VideoSource <<adapter>> {
-  +read(): Frame
-}
-class FaceLandmarkDetector <<adapter>> {
-  +detect(frame): Landmarks
-}
-class Evaluator <<domain>> {
-  +evaluate(metrics): FatigueDecision
-}
-class AlertSink <<adapter>> {
-  +publish(event): void
-}
+class ProcessFrameUseCase
+class VideoSource
+class FaceLandmarkDetector
+class Evaluator
+class AlertSink
 
 ProcessFrameUseCase --> VideoSource
 ProcessFrameUseCase --> FaceLandmarkDetector
 ProcessFrameUseCase --> Evaluator
 ProcessFrameUseCase --> AlertSink
-
-note right of ProcessFrameUseCase
-  Uma razão única para mudar:
-  orquestrar o ciclo de detecção.
-end note
-
 @enduml

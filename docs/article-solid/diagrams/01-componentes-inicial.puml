@@ -1,46 +1,45 @@
 @startuml
-title Arquitetura inicial — Detector de Fadiga Ubíquo
-
-skinparam componentStyle rectangle
+!theme plain
 skinparam shadowing false
+skinparam roundCorner 6
 skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 11
+skinparam ArrowColor #555555
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam ComponentBorderColor #333333
+skinparam PackageBackgroundColor #F5F5F5
+skinparam PackageBorderColor #888888
 
-package "Aquisição" as L1 {
-  [VideoSource] as VS
-  note bottom of VS
-    Webcam, vídeo, RTSP
-  end note
+package "Aquisição" {
+  [VideoSource]
 }
 
-package "Comunicação" as L2 {
-  [REST /video/push] as REST
-  [API Key Auth] as Auth
+package "Comunicação" {
+  [REST /video/push]
+  [API Key Auth]
 }
 
-package "Processamento e Regras de Negócio" as L3 {
-  [Use Cases\n(application)] as UC
-  [Domain\n(EAR/MAR, FatigueIndex)] as DOM
+package "Aplicação + Domínio" {
+  [Use Cases]
+  [EAR / MAR / FatigueIndex]
 }
 
-package "Armazenamento" as L4 {
-  [JsonlSink\n(eventos)] as JS
-  [Config YAML] as YAML
-  [Logs] as LOG
+package "Armazenamento" {
+  [JsonlSink]
+  [Config YAML]
 }
 
-package "Apresentação e Atuação" as L5 {
-  [Web Cockpit\n(React/Tailwind)] as WEB
-  [AlertSinks\n(sound/mqtt/http/log)] as AS
+package "Apresentação + Atuação" {
+  [Web Cockpit]
+  [AlertSinks]
 }
 
-VS --> UC : frame
-REST --> UC : frame remoto
-Auth -- REST
-UC --> DOM
-UC --> JS
-UC --> AS
-UC --> WEB
-YAML ..> UC : config
-LOG <.. UC
-
+[VideoSource] --> [Use Cases]
+[REST /video/push] --> [Use Cases]
+[API Key Auth] -- [REST /video/push]
+[Use Cases] --> [EAR / MAR / FatigueIndex]
+[Use Cases] --> [JsonlSink]
+[Use Cases] --> [AlertSinks]
+[Use Cases] --> [Web Cockpit]
+[Config YAML] ..> [Use Cases]
 @enduml

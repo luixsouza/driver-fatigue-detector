@@ -1,23 +1,24 @@
 @startuml
-title ISP — AlertSink minimal com Composite
-
-skinparam classAttributeIconSize 0
+!theme plain
 skinparam shadowing false
+skinparam roundCorner 6
 skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 11
+skinparam ArrowColor #555555
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #333333
+hide circle
+hide empty members
 
-interface AlertSink <<Protocol>> {
-  +publish(event): void
+interface AlertSink {
+  +publish(event)
 }
-
 class LogSink
 class JsonlSink
 class MqttSink
 class HttpWebhookSink
 class SoundSink
-class CompositeAlertSink {
-  -sinks: List<AlertSink>
-  +publish(event): void
-}
+class CompositeAlertSink
 
 AlertSink <|.. LogSink
 AlertSink <|.. JsonlSink
@@ -25,13 +26,5 @@ AlertSink <|.. MqttSink
 AlertSink <|.. HttpWebhookSink
 AlertSink <|.. SoundSink
 AlertSink <|.. CompositeAlertSink
-
 CompositeAlertSink o--> "*" AlertSink
-
-note bottom of AlertSink
-  Interface mínima: cada sink
-  implementa apenas o que faz.
-  Composite agrega sem violar ISP.
-end note
-
 @enduml

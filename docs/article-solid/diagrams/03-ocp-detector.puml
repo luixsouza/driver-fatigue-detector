@@ -1,33 +1,23 @@
 @startuml
-title OCP — Detector facial como porta plugável
-
-skinparam classAttributeIconSize 0
+!theme plain
 skinparam shadowing false
+skinparam roundCorner 6
 skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 11
+skinparam ArrowColor #555555
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #333333
+hide circle
+hide empty members
 
-interface FaceLandmarkDetector <<Protocol>> {
-  +detect(frame): Landmarks
-}
-
+interface FaceLandmarkDetector
 class MediaPipeDetector
-class DlibDetector <<proposto>>
-class OpenVINODetector <<proposto>>
-class ONNXDetector <<proposto>>
-
-class ProcessFrameUseCase
+class DlibDetector
+class OpenVINODetector
+class ONNXDetector
 
 FaceLandmarkDetector <|.. MediaPipeDetector
 FaceLandmarkDetector <|.. DlibDetector
 FaceLandmarkDetector <|.. OpenVINODetector
 FaceLandmarkDetector <|.. ONNXDetector
-
-ProcessFrameUseCase --> FaceLandmarkDetector
-
-note right of FaceLandmarkDetector
-  Fechado para modificação,
-  aberto para extensão:
-  novos algoritmos sem
-  tocar o use case.
-end note
-
 @enduml
