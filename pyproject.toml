@@ -7,6 +7,11 @@ name = "driver-fatigue-detector"
 version = "0.2.0"
 description = "Driver fatigue detector — Clean Architecture"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+readme = "README.md"
+authors = [
+    { name = "Luis Eduardo S. Teles", email = "luixst1@gmail.com" },
+]
 dependencies = [
     "opencv-python>=4.9",
     "mediapipe>=0.10.9",
@@ -36,11 +41,19 @@ fuzzy = [
     "networkx>=3.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/luixsouza/driver-fatigue-detector"
+Repository = "https://github.com/luixsouza/driver-fatigue-detector"
+Issues = "https://github.com/luixsouza/driver-fatigue-detector/issues"
+
 [project.scripts]
 driver-fatigue = "driver_fatigue.interfaces.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"driver_fatigue.resources" = ["audio/*.wav", "models/*.task"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -53,3 +66,24 @@ branch = true
 [tool.coverage.report]
 fail_under = 95
 show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+extend-exclude = ["tests/fixtures", "web/dist", "src/driver_fatigue/interfaces/web/static"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long — line-length acima ja lida
+    "B008",  # function call in default arg (pydantic Field usa isso)
+]

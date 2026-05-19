@@ -1,19 +1,23 @@
+# Python
 __pycache__/
 *.pyc
-.pytest_cache/
-.coverage
-htmlcov/
 *.egg-info/
 build/
 dist/
-web/node_modules/
-web/dist/
 .venv/
 venv/
 
-# Workflow / scratch local — fora do produto
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend (web/)
+web/node_modules/
+web/dist/
+
+# Workflow scratch — fora do produto
 .claude/
 .superpowers/
-docs/
 scripts/
 config/debug-*.yaml
