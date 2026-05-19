@@ -89,6 +89,90 @@ Motor de inferência acoplado & DIP & Substituir limiar por fuzzy/ML exige cirur
 \end{tabular}
 \end{table}
 
+\section{Aplicação dos princípios SOLID}
+
+Esta seção aplica cada um dos cinco princípios a um aspecto concreto do detector. Para cada princípio, descrevemos brevemente a solução ingênua (referente à versão monolítica anterior), apresentamos o desenho resultante após aplicação do princípio (referente ao código atual em \texttt{src/driver\_fatigue/}) e justificamos a escolha com base em uma característica ubíqua específica.
+
+\subsection{Single Responsibility Principle (SRP)}
+
+\textbf{Aspecto:} orquestração do ciclo de processamento de fadiga. Na solução ingênua, um único laço em \texttt{main.py} captura o frame, converte cor, invoca \texttt{dlib} para landmarks, calcula EAR/MAR, decide alerta, persiste evento e renderiza a janela --- todas as razões de mudança convergiam para o mesmo arquivo.
+
+\textbf{Desenho com SRP:} a Figura~\ref{fig:srp} mostra a separação em \texttt{ProcessFrameUseCase} (orquestração), \texttt{Evaluator} (decisão), \texttt{VideoSource} (captura), \texttt{FaceLandmarkDetector} (extração) e \texttt{AlertSink} (publicação). Cada classe tem uma razão única para mudar.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\columnwidth]{diagrams/png/02-srp-use-cases.png}
+    \caption{SRP: separação em casos de uso.}
+    \label{fig:srp}
+\end{figure}
+\FloatBarrier
+
+\textbf{Justificativa ubíqua:} \textit{escalabilidade}. Em cenário ubíquo evolutivo (múltiplos motoristas, múltiplas câmeras, frota), separar responsabilidades habilita escalar cada componente independentemente --- a captura pode mover-se para edge devices enquanto a inferência permanece em servidor central.
+
+\subsection{Open/Closed Principle (OCP)}
+
+\textbf{Aspecto:} extensão para novos detectores faciais. Na versão ingênua, \texttt{dlib.get\_frontal\_face\_detector()} e \texttt{shape\_predictor\_68\_face\_landmarks.dat} eram invocados diretamente no laço; trocar para MediaPipe ou OpenVINO exigia reescrever o pipeline.
+
+\textbf{Desenho com OCP:} a Figura~\ref{fig:ocp} apresenta a interface \texttt{FaceLandmarkDetector} como ponto de extensão. A implementação corrente é \texttt{MediaPipeDetector}; novas alternativas (\texttt{DlibDetector}, \texttt{OpenVINODetector}, \texttt{ONNXDetector}) são acrescentadas sem alterar \texttt{ProcessFrameUseCase}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\columnwidth]{diagrams/png/03-ocp-detector.png}
+    \caption{OCP: detector facial como porta plugável.}
+    \label{fig:ocp}
+\end{figure}
+\FloatBarrier
+
+\textbf{Justificativa ubíqua:} \textit{heterogeneidade de dispositivos e algoritmos}. Sistemas ubíquos rodam em hardware variado --- de laptops a edge devices Intel e smartphones --- e devem permitir a substituição do algoritmo de detecção por configuração, sem reescrever o núcleo.
+
+\subsection{Liskov Substitution Principle (LSP)}
+
+\textbf{Aspecto:} validação de contexto (qualidade de imagem, oclusão, head pose). Na versão ingênua, funções soltas com assinaturas divergentes (umas lançavam exceção, outras retornavam \texttt{None}) misturavam-se ao laço, quebrando o contrato implícito esperado pelo orquestrador.
+
+\textbf{Desenho com LSP:} a Figura~\ref{fig:lsp} apresenta a classe abstrata \texttt{ContextValidator} com método \texttt{validate(ctx) $\to$ ValidationResult}. Todas as subclasses (\texttt{ImageQualityValidator}, \texttt{HeadPose\-Validator}, \texttt{OcclusionValidator}, \texttt{LightingValidator}) honram o contrato: nunca lançam exceções inesperadas e sempre retornam um \texttt{ValidationResult} estruturado, sendo intercambiáveis em qualquer ponto da cadeia de validação.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\columnwidth]{diagrams/png/04-lsp-validators.png}
+    \caption{LSP: validadores com contrato uniforme.}
+    \label{fig:lsp}
+\end{figure}
+\FloatBarrier
+
+\textbf{Justificativa ubíqua:} \textit{sensibilidade ao contexto}. Validadores que violam seu contrato propagam exceções até a UI e quebram a transparência prometida ao motorista --- exatamente a propriedade que se espera de um sistema ubíquo.
+
+\subsection{Interface Segregation Principle (ISP)}
+
+\textbf{Aspecto:} publicação de eventos de fadiga em múltiplos canais. Na versão ingênua, uma única função \texttt{alarm()} acumulava reprodução de som, log e --- ao evoluir --- MQTT e webhook HTTP, forçando sinks ``silenciosos'' (como gravação JSONL) a implementar métodos de áudio que não usam.
+
+\textbf{Desenho com ISP:} a Figura~\ref{fig:isp} apresenta a interface minimal \texttt{AlertSink} com um único método \texttt{publish(event)}. Cinco implementações especializadas (\texttt{LogSink}, \texttt{JsonlSink}, \texttt{MqttSink}, \texttt{HttpWebhookSink}, \texttt{SoundSink}) cada uma com uma única responsabilidade, são agregadas por \texttt{CompositeAlertSink} sem violar o contrato.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\columnwidth]{diagrams/png/05-isp-alert-sinks.png}
+    \caption{ISP: \texttt{AlertSink} minimal com Composite.}
+    \label{fig:isp}
+\end{figure}
+\FloatBarrier
+
+\textbf{Justificativa ubíqua:} \textit{heterogeneidade de atuadores}. Sistemas ubíquos atuam por múltiplos canais físicos e lógicos (som, painel visual, push para nuvem, log local); interfaces segregadas permitem que cada atuador seja exatamente o que precisa ser.
+
+\subsection{Dependency Inversion Principle (DIP)}
+
+\textbf{Aspecto:} motor de inferência de fadiga. Na versão ingênua, a regra ``EAR $< 0{,}25$ por 20 frames consecutivos'' estava embutida no laço, tornando impossível experimentar lógica fuzzy ou modelo neural sem reescrever o núcleo.
+
+\textbf{Desenho com DIP:} a Figura~\ref{fig:dip} apresenta a interface \texttt{IndexEvaluator} no domínio. As implementações concretas (\texttt{FuzzyIndexEvaluator} com 12 regras IF--THEN e \texttt{NoOpIndexEvaluator} como \textit{fallback}) vivem em \texttt{infrastructure/fatigue\_inference/}. O caso de uso depende apenas da abstração; o \textit{bootstrap} injeta a implementação por configuração.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\columnwidth]{diagrams/png/06-dip-index-evaluator.png}
+    \caption{DIP: inferência via Strategy.}
+    \label{fig:dip}
+\end{figure}
+\FloatBarrier
+
+\textbf{Justificativa ubíqua:} \textit{mobilidade computacional}. A mesma decisão de fadiga pode ser tomada no \textit{edge} (laptop do motorista, fuzzy leve) ou na nuvem (modelo ML pesado quando há conectividade); DIP permite mover a lógica entre \textit{tiers} sem reescrever o núcleo.
+
 % --- Próxima seção ---
 
 \end{document}
