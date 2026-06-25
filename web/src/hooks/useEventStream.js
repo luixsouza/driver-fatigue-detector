@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
+// Eventos que NÃO devem aparecer na Timeline normal — pertencem ao Tour
+// Ubíquo (painel dedicado) ou são sondas internas de rede.
+const NON_TIMELINE_EVENTS = new Set(["tour", "net_probe"]);
+
 /**
  * Consome /api/stream (SSE) com reconnect exponencial.
- * Retorna { status, lastState, events } onde:
+ * Retorna { status, lastState, events, tourEvents } onde:
  * - status: "connecting" | "live" | "reconnecting"
  * - lastState: ultimo payload com event === "state" (ou null)
- * - events: lista (max 60) de payloads com event !== "state", mais recente primeiro
+ * - events: lista (max 60) de payloads de timeline, mais recente primeiro
+ * - tourEvents: payloads do Tour Ubíquo (event === "tour"), ordem cronológica
  */
 export function useEventStream() {
   const [status, setStatus] = useState("connecting");
   const [lastState, setLastState] = useState(null);
   const [events, setEvents] = useState([]);
+  const [tourEvents, setTourEvents] = useState([]);
   const cancelledRef = useRef(false);
   const esRef = useRef(null);
 
@@ -31,7 +37,9 @@ export function useEventStream() {
           const p = JSON.parse(msg.data);
           if (p.event === "state") {
             setLastState(p);
-          } else {
+          } else if (p.event === "tour") {
+            setTourEvents((prev) => [...prev, p].slice(-200));
+          } else if (!NON_TIMELINE_EVENTS.has(p.event)) {
             setEvents((prev) => [p, ...prev].slice(0, 60));
           }
         } catch {
@@ -57,5 +65,5 @@ export function useEventStream() {
     };
   }, []);
 
-  return { status, lastState, events };
+  return { status, lastState, events, tourEvents };
 }

@@ -8,8 +8,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/assets/index-B13uT7cM.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BNQYKy_p.css">
+    <script>
+      // Aplica o tema antes do primeiro paint (evita flash). Claro por padrão.
+      (function () {
+        try {
+          if (localStorage.getItem("theme") === "dark") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-Dcdaxpet.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-ClrAA8Km.css">
   </head>
   <body>
     <div id="root"></div>
