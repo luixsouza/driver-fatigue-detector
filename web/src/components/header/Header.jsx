@@ -1,27 +1,37 @@
+import { Sun, Moon } from "lucide-react";
 import { ConnBadge } from "./ConnBadge.jsx";
 
-export function Header({ status, fps = 0 }) {
+export function Header({ status, fps = 0, theme, onToggleTheme }) {
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface-0/70 px-7 py-4 backdrop-blur">
-      <div className="flex items-center gap-3">
-        <img src="/ifg-logo.svg" alt="IFG" className="h-9 w-9 rounded-lg shadow-[0_6px_16px_rgba(35,164,85,0.25)]" />
-        <div>
-          <h1 className="m-0 text-[15px] font-semibold tracking-tight text-text-0">
-            Driver Fatigue · Live Monitor
-          </h1>
-          <p className="m-0 mt-0.5 text-[11px] tracking-[0.04em] text-text-2">
-            Sistemas Ubíquos · NumbERS · IFG
-          </p>
+    <header className="sticky top-0 z-20 border-b border-line bg-surface-0/80 backdrop-blur">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-3.5">
+        <div className="flex items-center gap-3">
+          <img src="/ifg-logo.svg" alt="IFG" className="h-8 w-8 rounded-lg" />
+          <div>
+            <h1 className="m-0 text-[14px] font-semibold tracking-tight text-text-0">
+              Driver Fatigue Monitor
+            </h1>
+            <p className="m-0 text-[11px] text-text-2">Sistemas Ubíquos · IFG</p>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        {fps > 0 && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-1 px-3 py-1 font-mono text-xs tabular-nums text-text-1">
-            <span className="text-text-2">FPS</span>
-            <b className="text-text-0">{fps}</b>
-          </span>
-        )}
-        <ConnBadge status={status} />
+        <div className="flex items-center gap-2">
+          {fps > 0 && (
+            <span className="hidden items-center gap-1.5 rounded-full border border-line px-2.5 py-1 font-mono text-[11px] tabular-nums text-text-1 sm:inline-flex">
+              <span className="text-text-2">FPS</span>
+              <b className="text-text-0">{fps}</b>
+            </span>
+          )}
+          <ConnBadge status={status} />
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label="Alternar tema"
+            title="Alternar tema claro/escuro"
+            className="grid h-8 w-8 place-items-center rounded-full border border-line text-text-1 transition hover:bg-surface-2 hover:text-text-0"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
     </header>
   );

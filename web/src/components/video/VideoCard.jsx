@@ -22,7 +22,7 @@ export function VideoCard({ lastState, videoOnline }) {
   const isAlert = lastState?.index_severity === "alert" || lastState?.severity === "alert";
 
   return (
-    <div className="relative aspect-video overflow-hidden rounded-card border border-line bg-black shadow-[0_30px_60px_-20px_rgba(0,0,0,0.7)]">
+    <div className="shadow-card relative aspect-video overflow-hidden rounded-card border border-line bg-surface-2">
       <img
         ref={imgRef}
         alt=""
@@ -31,16 +31,18 @@ export function VideoCard({ lastState, videoOnline }) {
         onError={() => setLoaded(false)}
       />
       {!loaded && (
-        <div className="absolute inset-0 grid place-items-center bg-surface-1 text-center text-text-2">
-          <div className="px-10">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl border border-line bg-surface-2">
-              {videoOnline ? <Video className="h-8 w-8" /> : <VideoOff className="h-8 w-8" />}
+        <div className="absolute inset-0 grid place-items-center bg-surface-2 text-center text-text-2">
+          <div className="max-w-sm px-8">
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface-1">
+              {videoOnline ? <Video className="h-7 w-7" /> : <VideoOff className="h-7 w-7" />}
             </div>
-            <h3 className="m-0 mb-1 text-lg font-semibold text-text-0">
-              {videoOnline ? "Carregando stream…" : "Detector offline"}
+            <h3 className="m-0 mb-1.5 text-base font-semibold text-text-0">
+              {videoOnline ? "Carregando stream…" : "Sem vídeo ao vivo"}
             </h3>
-            <p className="text-sm">
-              Aguardando frames da câmera. O detector embutido está respawnando automaticamente.
+            <p className="text-sm leading-relaxed">
+              {videoOnline
+                ? "Aguardando os primeiros frames da câmera."
+                : "O detector de visão (câmera + mesh facial) não está ativo neste ambiente. O Tour Ubíquo abaixo funciona normalmente."}
             </p>
           </div>
         </div>

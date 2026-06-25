@@ -2,16 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Tema — tokens como CSS variables (R G B). Claro é o padrão (:root);
+   .dark sobrescreve. Trocado via <html class="dark"> pelo useTheme.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --c-surface-0: 247 248 250;
+  --c-surface-1: 255 255 255;
+  --c-surface-2: 241 243 246;
+  --c-surface-3: 232 235 240;
+  --c-line: 226 230 236;
+  --c-line-strong: 205 211 220;
+  --c-text-0: 17 21 28;
+  --c-text-1: 63 72 84;
+  --c-text-2: 107 115 133;
+  --c-text-3: 154 162 177;
+  --c-sev-normal: 22 163 74;
+  --c-sev-warning: 217 119 6;
+  --c-sev-alert: 225 29 72;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -16px rgba(16, 24, 40, 0.18);
+}
+
+.dark {
+  --c-surface-0: 8 9 12;
+  --c-surface-1: 14 17 22;
+  --c-surface-2: 20 24 31;
+  --c-surface-3: 26 31 40;
+  --c-line: 35 41 52;
+  --c-line-strong: 44 51 63;
+  --c-text-0: 241 244 249;
+  --c-text-1: 168 177 191;
+  --c-text-2: 107 115 133;
+  --c-text-3: 68 76 92;
+  --c-sev-normal: 74 222 128;
+  --c-sev-warning: 251 191 36;
+  --c-sev-alert: 244 63 94;
+  --shadow-card: 0 16px 40px -18px rgba(0, 0, 0, 0.55);
+}
+
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  background: theme(colors.surface.0);
-  color: theme(colors.text.0);
+  background: rgb(var(--c-surface-0));
+  color: rgb(var(--c-text-0));
   font-family: theme(fontFamily.sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-input[type="range"] {
-  @apply accent-ifg-green;
-}
+/* Sombra de card sensível ao tema (usada pelo componente Card). */
+.shadow-card { box-shadow: var(--shadow-card); }
+
+input[type="range"] { @apply accent-ifg-green; }

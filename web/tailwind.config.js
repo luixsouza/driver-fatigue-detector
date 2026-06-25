@@ -4,31 +4,33 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Tokens baseados em CSS variables (R G B) → suportam tema claro/escuro
+        // e utilitários de alpha (ex.: bg-surface-1/70). Ver src/index.css.
         ifg: {
           green: "#23A455",
           "green-dark": "#1C7A3F",
           "green-light": "#4CC97A",
         },
         surface: {
-          0: "#08090c",
-          1: "#0e1116",
-          2: "#14181f",
-          3: "#1a1f28",
+          0: "rgb(var(--c-surface-0) / <alpha-value>)",
+          1: "rgb(var(--c-surface-1) / <alpha-value>)",
+          2: "rgb(var(--c-surface-2) / <alpha-value>)",
+          3: "rgb(var(--c-surface-3) / <alpha-value>)",
         },
         line: {
-          DEFAULT: "#232934",
-          strong: "#2c333f",
+          DEFAULT: "rgb(var(--c-line) / <alpha-value>)",
+          strong: "rgb(var(--c-line-strong) / <alpha-value>)",
         },
         text: {
-          0: "#f1f4f9",
-          1: "#a8b1bf",
-          2: "#6b7385",
-          3: "#444c5c",
+          0: "rgb(var(--c-text-0) / <alpha-value>)",
+          1: "rgb(var(--c-text-1) / <alpha-value>)",
+          2: "rgb(var(--c-text-2) / <alpha-value>)",
+          3: "rgb(var(--c-text-3) / <alpha-value>)",
         },
         severity: {
-          normal: "#4ade80",
-          warning: "#fbbf24",
-          alert: "#f43f5e",
+          normal: "rgb(var(--c-sev-normal) / <alpha-value>)",
+          warning: "rgb(var(--c-sev-warning) / <alpha-value>)",
+          alert: "rgb(var(--c-sev-alert) / <alpha-value>)",
         },
       },
       fontFamily: {

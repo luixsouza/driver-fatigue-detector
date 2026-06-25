@@ -152,6 +152,59 @@ def _update_thresholds(updates: dict) -> dict[str, float]:
 _demo_runner_lock = threading.Lock()
 _demo_runner: _DemoScenarioRunner | None = None
 
+# Tour Ubiquo (demonstracao automatica das 5 propriedades invisiveis).
+# Singleton tambem. Ver interfaces/web/ubiquity_tour.py.
+_tour_runner_lock = threading.Lock()
+_tour_runner: Any = None
+_TOUR_STEPS = ("fault", "heterogeneity", "privacy", "security", "distribution")
+
+# Referencia ao detector embutido + contador de geracao (incrementa a cada
+# respawn). Usados pelo passo "tolerancia a falhas" do Tour Ubiquo pra
+# derrubar o detector e medir quanto tempo o supervisor leva pra recuperar.
+_active_runner: _EmbeddedDetectorRunner | None = None
+_detector_gen_lock = threading.Lock()
+_detector_generation = 0
+
+# Host/porta efetivos do servidor — usados pelos passos de loopback do tour.
+_server_host = "127.0.0.1"
+_server_port = 8000
+
+
+def _inject_detector_fault(timeout: float = 15.0) -> dict[str, Any]:
+    """Derruba o run atual do detector e espera o supervisor respawnar.
+
+    Retorna {available, respawn_seconds}. Usado pelo Tour Ubiquo."""
+    runner = _active_runner
+    if runner is None:
+        return {"available": False}
+    with _detector_gen_lock:
+        gen0 = _detector_generation
+    t0 = time.monotonic()
+    runner.force_restart()
+    deadline = t0 + timeout
+    while time.monotonic() < deadline:
+        with _detector_gen_lock:
+            if _detector_generation > gen0:
+                return {"available": True, "respawn_seconds": time.monotonic() - t0}
+        time.sleep(0.05)
+    return {"available": True, "respawn_seconds": None, "timed_out": True}
+
+
+def _topology_snapshot() -> dict[str, Any]:
+    """Estado vivo dos componentes distribuidos — alimenta o passo de
+    distribuicao do Tour Ubiquo."""
+    now = time.monotonic()
+    with _detector_gen_lock:
+        gen = _detector_generation
+    return {
+        "detector_embedded": _active_runner is not None,
+        "detector_generation": gen,
+        "sse_subscribers": len(_subscribers),
+        "video_subscribers": len(_video_subscribers),
+        "uptime_seconds": round(now - _started_at, 1) if _started_at > 0 else None,
+        "transport": "in-process (fast path) + HTTP POST /api/events (remoto)",
+    }
+
 
 _DEMO_TIMELINE: list[tuple[float, dict[str, float]]] = [
     (0.0,  {"bpm": 75, "steering_noise": 0.10, "hours_driving": 5.0, "hour_of_day": 15.0}),
@@ -336,7 +389,7 @@ class _Handler(BaseHTTPRequestHandler):
         return False
 
     def do_POST(self) -> None:  # noqa: N802
-        global _demo_runner
+        global _demo_runner, _tour_runner
         path = self.path.split("?", 1)[0].split("#", 1)[0]
         self.path = path
         if self.path == "/api/events":
@@ -410,6 +463,60 @@ class _Handler(BaseHTTPRequestHandler):
                     return
                 _demo_runner.stop()
                 _demo_runner = None
+            self._json(202, {"status": "stopped"})
+            return
+        if self.path == "/api/demo/secure-echo":
+            # Endpoint dedicado à demonstração de segurança do Tour Ubiquo.
+            # Exige X-Demo-Key fixa (independe da web.api_key) → 401/200
+            # determinístico. Espelha o mesmo mecanismo de _require_auth.
+            from driver_fatigue.interfaces.web.ubiquity_tour import DEMO_SECURE_KEY
+            length = int(self.headers.get("Content-Length", "0"))
+            if length > 0:
+                self.rfile.read(length)
+            if self.headers.get("X-Demo-Key") == DEMO_SECURE_KEY:
+                self._json(200, {"status": "ok", "authenticated": True})
+            else:
+                self._json(401, {"status": "unauthorized"})
+            return
+        if self.path == "/api/demo/tour/start":
+            if not self._require_auth():
+                return
+            length = int(self.headers.get("Content-Length", "0"))
+            if length > 0:
+                self.rfile.read(length)
+            from driver_fatigue.interfaces.web.ubiquity_tour import UbiquityTourRunner
+            with _tour_runner_lock:
+                if _tour_runner is not None and _tour_runner.is_alive():
+                    self._json(409, {"error": "tour already running"})
+                    return
+                demo_dir = Path(
+                    os.environ.get("DRIVER_FATIGUE_DEMO_DIR")
+                    or (Path.cwd() / "demo-artifacts")
+                )
+                _tour_runner = UbiquityTourRunner(
+                    broadcast=_broadcast,
+                    host=_server_host,
+                    port=_server_port,
+                    api_key=_api_key,
+                    fault_injector=_inject_detector_fault,
+                    topology_probe=_topology_snapshot,
+                    demo_dir=demo_dir,
+                )
+                _tour_runner.start()
+            self._json(202, {"status": "started", "steps": list(_TOUR_STEPS)})
+            return
+        if self.path == "/api/demo/tour/stop":
+            if not self._require_auth():
+                return
+            length = int(self.headers.get("Content-Length", "0"))
+            if length > 0:
+                self.rfile.read(length)
+            with _tour_runner_lock:
+                if _tour_runner is None or not _tour_runner.is_alive():
+                    self._json(200, {"status": "not_running"})
+                    return
+                _tour_runner.stop()
+                _tour_runner = None
             self._json(202, {"status": "stopped"})
             return
         self.send_error(404, "not found")
@@ -677,6 +784,14 @@ class _EmbeddedDetectorRunner:
         if self._presenter is not None:
             self._presenter.request_stop()
 
+    def force_restart(self) -> None:
+        """Faz o run atual terminar (sem parar o supervisor) → respawn.
+
+        Diferente de stop(): não seta self._stop, então o loop respawna o
+        detector. Usado pelo Tour Ubiquo pra demonstrar tolerância a falhas."""
+        if self._presenter is not None:
+            self._presenter.request_stop()
+
     def _build_settings(self):
         from driver_fatigue.config.settings import (
             AppSettings,
@@ -722,8 +837,10 @@ class _EmbeddedDetectorRunner:
         )
         # Registra o DetectFatigueUseCase ativo pra /api/inputs mexer
         # ear_threshold/mar_threshold/etc em runtime.
-        global _active_detect_uc
+        global _active_detect_uc, _detector_generation
         _active_detect_uc = uc._detect
+        with _detector_gen_lock:
+            _detector_generation += 1
         if _thresholds_dirty:
             # Usuário já mexeu sliders — aplica o snapshot da UI no detector.
             _active_detect_uc.update_thresholds(**_get_thresholds_snapshot())
@@ -778,9 +895,11 @@ def serve(
     detector_extra_args: list[str] | None = None,  # noqa: ARG001 (compat)
     api_key: str | None = None,
 ) -> None:
-    global _api_key, _started_at
+    global _api_key, _started_at, _server_host, _server_port
     _api_key = api_key
     _started_at = time.monotonic()
+    _server_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    _server_port = port
     if api_key is None and host not in ("127.0.0.1", "::1", "localhost"):
         _log.warning(
             "Servindo em %s sem api_key — qualquer um na rede pode publicar eventos/vídeo. "
@@ -794,6 +913,7 @@ def serve(
     if api_key:
         print("Auth: X-API-Key obrigatorio em POST /api/events e /api/video/push")
 
+    global _active_runner
     runner: _EmbeddedDetectorRunner | None = None
     if spawn_detector:
         cfg_path = Path(detector_config) if detector_config else None
@@ -801,6 +921,7 @@ def serve(
             source=detector_source,
             config_path=cfg_path,
         )
+        _active_runner = runner
         runner.start()
         print(f"Detector embutido (in-process) iniciado — fonte={detector_source}"
               + (f" config={detector_config}" if detector_config else ""))

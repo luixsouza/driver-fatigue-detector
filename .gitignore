@@ -12,6 +12,9 @@ venv/
 .coverage
 htmlcov/
 
+# Artefatos gerados pelo Tour Ubiquo (events.jsonl de demonstracao)
+demo-artifacts/
+
 # Frontend (web/)
 web/node_modules/
 web/dist/
